@@ -22,7 +22,6 @@ namespace SubtitleConverter
         /// <param name="playlist">The playlist of videos to convert.</param>
         /// <param name="outputDirectory">The directory where markdown files should be created.</param>
         /// <param name="cacheDirectory">The directory subtitle files will be cached.</param>
-        /// <param name="clientSecretsFilePath">File path to client secrets.</param>
         /// <param name="useEnvironmentVariablesForAuth">Attempt to store/load data from environment variables</param>
         /// <param name="console"></param>
         /// <returns></returns>
@@ -46,10 +45,19 @@ namespace SubtitleConverter
             {
                 cts.CancelAfter(TimeSpan.FromMinutes(1));
 
+                console.Out.WriteLine($"Loading auth data from {(useEnvironmentVariablesForAuth ? "<ENVIRONMENT VARIABLES>" : "auth_cache folder")}");
                 IDataStore dataStore = useEnvironmentVariablesForAuth ? (IDataStore)new EnvironmentVariablesDataStore() : new FileDataStore(Path.GetFullPath("auth_cache"), true);
 
+                GoogleClientSecrets secrets = GetClientSecrets(useEnvironmentVariablesForAuth);
+
+                if (secrets?.Secrets == null)
+                {
+                    console.Error.WriteLine("Did not find client auth secrets");
+                    return;
+                }
+
                 credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    GetClientSecrets(useEnvironmentVariablesForAuth).Secrets,
+                    secrets.Secrets,
                     // This OAuth 2.0 access scope allows for full read/write access to the
                     // authenticated user's account.
                     new[] { YouTubeService.Scope.YoutubeForceSsl, YouTubeService.Scope.Youtube },
@@ -57,7 +65,6 @@ namespace SubtitleConverter
                     cts.Token,
                     dataStore
                 );
-
             }
 
             var service = new YouTubeService(new BaseClientService.Initializer
