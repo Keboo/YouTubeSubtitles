@@ -22,11 +22,14 @@ namespace SubtitleConverter
         /// <param name="playlist">The playlist of videos to convert.</param>
         /// <param name="outputDirectory">The directory where markdown files should be created.</param>
         /// <param name="cacheDirectory">The directory subtitle files will be cached.</param>
+        /// <param name="clientSecretsFilePath">File path to client secrets.</param>
+        /// <param name="useEnvironmentVariablesForAuth">Attempt to store/load data from environment variables</param>
         /// <param name="console"></param>
         /// <returns></returns>
-        static async Task Main(string videoId = "", string playlist = "", 
+        static async Task Main(string videoId = "", string playlist = "",
             string outputDirectory = ".",
             string cacheDirectory = ".\\cache",
+            bool useEnvironmentVariablesForAuth = false,
             IConsole console = null)
         {
             if (console == null) throw new ArgumentNullException(nameof(console));
@@ -37,21 +40,24 @@ namespace SubtitleConverter
                 return;
             }
 
-            DirectoryInfo cache = new DirectoryInfo(cacheDirectory);
-            cache.Create();
-
             UserCredential credential;
-            using (var stream = new FileStream("client_secret.json", FileMode.Open, FileAccess.Read))
+
+            using (var cts = new CancellationTokenSource())
             {
+                cts.CancelAfter(TimeSpan.FromMinutes(1));
+
+                IDataStore dataStore = useEnvironmentVariablesForAuth ? (IDataStore)new EnvironmentVariablesDataStore() : new FileDataStore(Path.GetFullPath("auth_cache"), true);
+
                 credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    GoogleClientSecrets.Load(stream).Secrets,
-                     // This OAuth 2.0 access scope allows for full read/write access to the
-                     // authenticated user's account.
+                    GetClientSecrets(useEnvironmentVariablesForAuth).Secrets,
+                    // This OAuth 2.0 access scope allows for full read/write access to the
+                    // authenticated user's account.
                     new[] { YouTubeService.Scope.YoutubeForceSsl, YouTubeService.Scope.Youtube },
-                    "user",
-                    CancellationToken.None,
-                    new FileDataStore("auth_cache.json")
+                    "UserAuth",
+                    cts.Token,
+                    dataStore
                 );
+
             }
 
             var service = new YouTubeService(new BaseClientService.Initializer
@@ -59,6 +65,9 @@ namespace SubtitleConverter
                 HttpClientInitializer = credential,
                 ApplicationName = "SubtitleConverter"
             });
+
+            DirectoryInfo cache = new DirectoryInfo(cacheDirectory);
+            cache.Create();
 
             if (!string.IsNullOrEmpty(playlist))
             {
@@ -92,7 +101,30 @@ namespace SubtitleConverter
             {
                 console.Error.WriteLine("No playlist or video specified");
             }
-            
+
+        }
+
+        private static GoogleClientSecrets GetClientSecrets(bool useEnvironmentVariables)
+        {
+            if (useEnvironmentVariables)
+            {
+                using (var stream = new MemoryStream())
+                using (var sw = new StreamWriter(stream))
+                {
+                    string value = EnvironmentVariablesDataStore.GetValue("ClientSecret");
+                    sw.Write(value);
+                    sw.Flush();
+                    stream.Position = 0;
+                    return GoogleClientSecrets.Load(stream);
+                }
+            }
+            else
+            {
+                using (var stream = new FileStream("client_secret.json", FileMode.Open, FileAccess.Read))
+                {
+                    return GoogleClientSecrets.Load(stream);
+                }
+            }
         }
 
         private static async Task ConvertVideoCaptions(string videoId, string outputDirectory, YouTubeService service, IConsole console, DirectoryInfo cacheDirectory)
