@@ -122,7 +122,7 @@ namespace SubtitleConverter
                     string value = EnvironmentVariablesDataStore.GetValue("ClientSecret");
                     sw.Write(value);
                     sw.Flush();
-                    console.Out.WriteLine($"Found variable with length {value.Length}");
+                    console.Out.WriteLine($"Found variable with length {value?.Length ?? 0}");
                     stream.Position = 0;
                     return GoogleClientSecrets.Load(stream);
                 }
