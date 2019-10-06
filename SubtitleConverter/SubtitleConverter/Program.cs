@@ -25,7 +25,7 @@ namespace SubtitleConverter
         /// <param name="useEnvironmentVariablesForAuth">Attempt to store/load data from environment variables</param>
         /// <param name="console"></param>
         /// <returns></returns>
-        static async Task Main(string videoId = "", string playlist = "",
+        static async Task<int> Main(string videoId = "", string playlist = "",
             string outputDirectory = ".",
             string cacheDirectory = ".\\cache",
             bool useEnvironmentVariablesForAuth = false,
@@ -36,7 +36,7 @@ namespace SubtitleConverter
             if (string.IsNullOrEmpty(videoId) && string.IsNullOrEmpty(playlist))
             {
                 console.Error.WriteLine("Must specify either a video or a playlist");
-                return;
+                return 1;
             }
 
             UserCredential credential;
@@ -48,12 +48,12 @@ namespace SubtitleConverter
                 console.Out.WriteLine($"Loading auth data from {(useEnvironmentVariablesForAuth ? "<ENVIRONMENT VARIABLES>" : "auth_cache folder")}");
                 IDataStore dataStore = useEnvironmentVariablesForAuth ? (IDataStore)new EnvironmentVariablesDataStore() : new FileDataStore(Path.GetFullPath("auth_cache"), true);
 
-                GoogleClientSecrets secrets = GetClientSecrets(useEnvironmentVariablesForAuth);
+                GoogleClientSecrets secrets = GetClientSecrets(useEnvironmentVariablesForAuth, console);
 
                 if (secrets?.Secrets == null)
                 {
                     console.Error.WriteLine("Did not find client auth secrets");
-                    return;
+                    return 1;
                 }
 
                 credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
@@ -91,7 +91,7 @@ namespace SubtitleConverter
                     if (!playlistResponse.Items.Any())
                     {
                         console.Error.WriteLine($"Did not find any items in playlist {playlist}");
-                        return;
+                        return 1;
                     }
 
                     foreach (PlaylistItem item in playlistResponse.Items)
@@ -107,11 +107,12 @@ namespace SubtitleConverter
             else
             {
                 console.Error.WriteLine("No playlist or video specified");
+                return 1;
             }
-
+            return 0;
         }
 
-        private static GoogleClientSecrets GetClientSecrets(bool useEnvironmentVariables)
+        private static GoogleClientSecrets GetClientSecrets(bool useEnvironmentVariables, IConsole console)
         {
             if (useEnvironmentVariables)
             {
@@ -121,6 +122,7 @@ namespace SubtitleConverter
                     string value = EnvironmentVariablesDataStore.GetValue("ClientSecret");
                     sw.Write(value);
                     sw.Flush();
+                    console.Out.WriteLine($"Found variable with length {value.Length}");
                     stream.Position = 0;
                     return GoogleClientSecrets.Load(stream);
                 }
