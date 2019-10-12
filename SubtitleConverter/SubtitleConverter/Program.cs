@@ -10,14 +10,18 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Apis.YouTube.v3.Data;
+using System.Net.Http;
 
 namespace SubtitleConverter
 {
     class Program
     {
+        private static HttpClient HttpClient { get; } = new HttpClient();
+
         /// <summary>
         /// Convert subtitles to markdown
         /// </summary>
+        /// <param name="subtitleUri">Uri source to the subtitle to avoid youtube API calls</param>
         /// <param name="videoId">The id of the YouTube video.</param>
         /// <param name="playlist">The playlist of videos to convert.</param>
         /// <param name="outputDirectory">The directory where markdown files should be created.</param>
@@ -25,7 +29,10 @@ namespace SubtitleConverter
         /// <param name="useEnvironmentVariablesForAuth">Attempt to store/load data from environment variables</param>
         /// <param name="console"></param>
         /// <returns></returns>
-        static async Task<int> Main(string videoId = "", string playlist = "",
+        static async Task<int> Main(
+            string subtitleUri = "",
+            string videoId = "",
+            string playlist = "",
             string outputDirectory = ".",
             string cacheDirectory = ".\\cache",
             bool useEnvironmentVariablesForAuth = false,
@@ -33,10 +40,19 @@ namespace SubtitleConverter
         {
             if (console == null) throw new ArgumentNullException(nameof(console));
 
+
             if (string.IsNullOrEmpty(videoId) && string.IsNullOrEmpty(playlist))
             {
                 console.Error.WriteLine("Must specify either a video or a playlist");
                 return 1;
+            }
+
+            if (!string.IsNullOrEmpty(subtitleUri) && !string.IsNullOrEmpty(videoId))
+            {
+                string subtitles = await HttpClient.GetStringAsync(subtitleUri);
+                var video = new Video(videoId, null, subtitles);
+                ConvertVideoCaptions(video, outputDirectory, console);
+                return 0;
             }
 
             UserCredential credential;
@@ -143,35 +159,40 @@ namespace SubtitleConverter
             Video video = await GetSubtitles(videoId, service, cacheDirectory);
             if (video != null)
             {
-                string srtCaptions = video.Subtitles;
-
-                string videoUrl = $"https://youtu.be/{videoId}";
-                srtCaptions = Regex.Replace(srtCaptions, @"^(\d+)\s*$", "", RegexOptions.Multiline);
-                srtCaptions = Regex.Replace(srtCaptions, @"(?<=^)((\d+):(\d+):(\d+)[\d:,]* --> [\d:,]+)\s*\r?\n([^\r\n]+)", $"[$5]({videoUrl}?t=$2h$3m$4s)\r\n", RegexOptions.Multiline);
-                srtCaptions = $"[YouTube Video]({videoUrl})\r\n\r\n" + srtCaptions;
-
-                string fileName = videoId;
-                if (video.Prefix is string prefix)
-                {
-                    fileName = $"{prefix}-{fileName}";
-                }
-
-                fileName = SanitizeFileName(fileName);
-                foreach (var invalidChar in Path.GetInvalidFileNameChars())
-                {
-                    fileName = fileName.Replace(invalidChar.ToString(), "");
-                }
-
-                fileName += ".md";
-
-                string path = Path.GetFullPath(Path.Combine(outputDirectory, fileName));
-                File.WriteAllText(path, srtCaptions);
-                console.Out.WriteLine($"Wrote markdown to: {path}");
+                ConvertVideoCaptions(video, outputDirectory, console);
             }
             else
             {
                 console.Error.WriteLine("Failed to find captions");
             }
+        }
+
+        private static void ConvertVideoCaptions(Video video, string outputDirectory, IConsole console)
+        {
+            string srtCaptions = video.Subtitles;
+
+            string videoUrl = $"https://youtu.be/{video.Id}";
+            srtCaptions = Regex.Replace(srtCaptions, @"^(\d+)\s*$", "", RegexOptions.Multiline);
+            srtCaptions = Regex.Replace(srtCaptions, @"(?<=^)((\d+):(\d+):(\d+)[\d:,]* --> [\d:,]+)\s*\r?\n([^\r\n]+)", $"[$5]({videoUrl}?t=$2h$3m$4s)\r\n", RegexOptions.Multiline);
+            srtCaptions = $"[YouTube Video]({videoUrl})\r\n\r\n" + srtCaptions;
+
+            string fileName = video.Id;
+            if (video.Prefix is string prefix)
+            {
+                fileName = $"{prefix}-{fileName}";
+            }
+
+            fileName = SanitizeFileName(fileName);
+            foreach (var invalidChar in Path.GetInvalidFileNameChars())
+            {
+                fileName = fileName.Replace(invalidChar.ToString(), "");
+            }
+
+            fileName += ".md";
+
+            string path = Path.GetFullPath(Path.Combine(outputDirectory, fileName));
+            File.WriteAllText(path, srtCaptions);
+            console.Out.WriteLine($"Wrote markdown to: {path}");
         }
 
         private static string SanitizeFileName(string fileName)
@@ -194,7 +215,7 @@ namespace SubtitleConverter
                 {
                     string prefix = await streamReader.ReadLineAsync();
                     string subtitles = await streamReader.ReadToEndAsync();
-                    return new Video(prefix, subtitles);
+                    return new Video(videoId, prefix, subtitles);
                 }
             }
 
@@ -224,7 +245,7 @@ namespace SubtitleConverter
                     await streamWriter.WriteLineAsync(prefix);
                     await streamWriter.WriteAsync(srtCaptions);
                 }
-                return new Video(prefix, srtCaptions);
+                return new Video(videoId, prefix, srtCaptions);
             }
 
             return null;
@@ -232,12 +253,14 @@ namespace SubtitleConverter
 
         private class Video
         {
-            public Video(string prefix, string subtitles)
+            public Video(string id, string prefix, string subtitles)
             {
+                Id = id;
                 Prefix = prefix;
                 Subtitles = subtitles;
             }
 
+            public string Id { get; }
             public string Prefix { get; }
             public string Subtitles { get; }
         }
