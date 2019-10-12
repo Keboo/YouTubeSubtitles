@@ -190,6 +190,7 @@ namespace SubtitleConverter
 
             fileName += ".md";
 
+            Directory.CreateDirectory(outputDirectory);
             string path = Path.GetFullPath(Path.Combine(outputDirectory, fileName));
             File.WriteAllText(path, srtCaptions);
             console.Out.WriteLine($"Wrote markdown to: {path}");
