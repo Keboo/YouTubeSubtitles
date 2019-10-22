@@ -38,12 +38,17 @@ namespace DownloadSubtitle
                     string tags = "";
                     if (videoDetails.Snippet.Tags is IList<string> videoTags)
                     {
-                        tags = string.Join(" ", videoTags.Select(x => $"#{x}"));
+                        tags = string.Join(" ", videoTags.Select(x => $"#{CleanupTag(x)}"));
                     }
                     return new OkObjectResult(tags);
                 }
                 return new NotFoundResult();
             }
+        }
+
+        private static string CleanupTag(string tag)
+        {
+            return tag.Replace(" ", "").Replace("#", "Sharp");
         }
     }
 }
