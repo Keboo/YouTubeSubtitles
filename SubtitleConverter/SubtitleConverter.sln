@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.29020.237
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubtitleConverter", "SubtitleConverter\SubtitleConverter.csproj", "{F0A12AAC-1515-421B-9B95-116508C54DD0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DownloadSubtitle", "DownloadSubtitle\DownloadSubtitle.csproj", "{239C87D5-500D-46B4-9A2E-E4E86E493763}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DownloadSubtitle", "DownloadSubtitle\DownloadSubtitle.csproj", "{239C87D5-500D-46B4-9A2E-E4E86E493763}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
