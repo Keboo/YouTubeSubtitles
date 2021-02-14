@@ -1,0 +1,29 @@
+name: .NET
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: SubtitleConverter
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Setup FFmpeg
+      # You may pin to the exact commit or the version.
+      # uses: FedericoCarboni/setup-ffmpeg@195514cd39ecf285ad36556ef6a3e14e3e779505
+      uses: FedericoCarboni/setup-ffmpeg@v1-beta
+      
