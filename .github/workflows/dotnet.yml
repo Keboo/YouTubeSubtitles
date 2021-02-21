@@ -25,5 +25,10 @@ jobs:
       # uses: FedericoCarboni/setup-ffmpeg@195514cd39ecf285ad36556ef6a3e14e3e779505
       uses: FedericoCarboni/setup-ffmpeg@v1-beta
     - name: Run
-      run: dotnet run --no-build --no-restore SubtitleConverter\VideoConverter\VideoConverter.csproj
-      
+      run: dotnet run --no-build --no-restore SubtitleConverter\VideoConverter\VideoConverter.csproj -- 
+        --twitch-user-id ${{ secrets.TWITCH_USER_ID }}
+        --twitch-client-id ${{ secrets.TWITCH_CLIENT_ID }}
+        --twitch-client-secret ${{ secrets.TWITCH_CLIENT_SECRET }}
+        --azure-storage-account-key ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+        --you-tube-client-id ${{ secrets.YOUTUBE_CLIENT_ID }}
+        --you-tube-client-secret ${{ secrets.YOUTUBE_CLIENT_SECRET }}
