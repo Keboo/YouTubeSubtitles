@@ -7,6 +7,16 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubtitleConverter", "Subtit
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DownloadSubtitle", "DownloadSubtitle\DownloadSubtitle.csproj", "{239C87D5-500D-46B4-9A2E-E4E86E493763}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VideoConverter", "VideoConverter\VideoConverter.csproj", "{0F6646D4-B512-4B29-A4C5-DE231442A91F}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StreamingTools", "StreamingTools\StreamingTools.csproj", "{1EC864DF-F83D-4F7C-868E-3CEBF82FF38F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5A47E85B-7895-4086-B227-02A0054BB22A}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +31,14 @@ Global
 		{239C87D5-500D-46B4-9A2E-E4E86E493763}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{239C87D5-500D-46B4-9A2E-E4E86E493763}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{239C87D5-500D-46B4-9A2E-E4E86E493763}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0F6646D4-B512-4B29-A4C5-DE231442A91F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0F6646D4-B512-4B29-A4C5-DE231442A91F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0F6646D4-B512-4B29-A4C5-DE231442A91F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0F6646D4-B512-4B29-A4C5-DE231442A91F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1EC864DF-F83D-4F7C-868E-3CEBF82FF38F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1EC864DF-F83D-4F7C-868E-3CEBF82FF38F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1EC864DF-F83D-4F7C-868E-3CEBF82FF38F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1EC864DF-F83D-4F7C-868E-3CEBF82FF38F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

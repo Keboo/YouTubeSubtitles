@@ -11,6 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Google.Apis.YouTube.v3.Data;
 using System.Net.Http;
+using StreamingTools;
+using StreamingTools.YouTube;
 
 namespace SubtitleConverter
 {
@@ -36,9 +38,9 @@ namespace SubtitleConverter
             string outputDirectory = ".",
             string cacheDirectory = ".\\cache",
             bool useEnvironmentVariablesForAuth = false,
-            IConsole console = null)
+            IConsole? console = null)
         {
-            if (console == null) throw new ArgumentNullException(nameof(console));
+            if (console is null) throw new ArgumentNullException(nameof(console));
 
 
             if (string.IsNullOrEmpty(videoId) && string.IsNullOrEmpty(playlist))
@@ -62,7 +64,7 @@ namespace SubtitleConverter
                 cts.CancelAfter(TimeSpan.FromMinutes(1));
 
                 console.Out.WriteLine($"Loading auth data from {(useEnvironmentVariablesForAuth ? "<ENVIRONMENT VARIABLES>" : "auth_cache folder")}");
-                IDataStore dataStore = useEnvironmentVariablesForAuth ? (IDataStore)new EnvironmentVariablesDataStore() : new FileDataStore(Path.GetFullPath("auth_cache"), true);
+                IDataStore dataStore = useEnvironmentVariablesForAuth ? (IDataStore)new EnvironmentVariablesDataStore("SubtitleConverter-") : new FileDataStore(Path.GetFullPath("auth_cache"), true);
 
                 GoogleClientSecrets secrets = GetClientSecrets(useEnvironmentVariablesForAuth, console);
 
@@ -89,12 +91,12 @@ namespace SubtitleConverter
                 ApplicationName = "SubtitleConverter"
             });
 
-            DirectoryInfo cache = new DirectoryInfo(cacheDirectory);
+            DirectoryInfo cache = new(cacheDirectory);
             cache.Create();
 
             if (!string.IsNullOrEmpty(playlist))
             {
-                string nextPageToken = null;
+                string? nextPageToken = null;
                 do
                 {
                     var playlistRequest = service.PlaylistItems.List("contentDetails");
@@ -132,23 +134,19 @@ namespace SubtitleConverter
         {
             if (useEnvironmentVariables)
             {
-                using (var stream = new MemoryStream())
-                using (var sw = new StreamWriter(stream))
-                {
-                    string value = EnvironmentVariablesDataStore.GetValue("ClientSecret");
-                    sw.Write(value);
-                    sw.Flush();
-                    console.Out.WriteLine($"Found variable with length {value?.Length ?? 0}");
-                    stream.Position = 0;
-                    return GoogleClientSecrets.Load(stream);
-                }
+                using var stream = new MemoryStream();
+                using var sw = new StreamWriter(stream);
+                string value = new EnvironmentVariablesDataStore("SubtitleConverter-").GetValue("ClientSecret") ?? "";
+                sw.Write(value);
+                sw.Flush();
+                console.Out.WriteLine($"Found variable with length {value?.Length ?? 0}");
+                stream.Position = 0;
+                return GoogleClientSecrets.Load(stream);
             }
             else
             {
-                using (var stream = new FileStream("client_secret.json", FileMode.Open, FileAccess.Read))
-                {
-                    return GoogleClientSecrets.Load(stream);
-                }
+                using var stream = new FileStream("client_secret.json", FileMode.Open, FileAccess.Read);
+                return GoogleClientSecrets.Load(stream);
             }
         }
 
@@ -156,7 +154,7 @@ namespace SubtitleConverter
         {
             console.Out.WriteLine($"Processing video {videoId}");
 
-            Video video = await GetSubtitles(videoId, service, cacheDirectory);
+            Video? video = await GetSubtitles(videoId, service, cacheDirectory);
             if (video != null)
             {
                 ConvertVideoCaptions(video, outputDirectory, console);
@@ -205,7 +203,7 @@ namespace SubtitleConverter
             return fileName;
         }
 
-        private static async Task<Video> GetSubtitles(string videoId, YouTubeService service, DirectoryInfo cacheDirectory)
+        private static async Task<Video?> GetSubtitles(string videoId, YouTubeService service, DirectoryInfo cacheDirectory)
         {
             string fileName = SanitizeFileName(videoId);
             string path = Path.Combine(cacheDirectory.FullName, fileName);
@@ -214,7 +212,7 @@ namespace SubtitleConverter
             {
                 using (var streamReader = new StreamReader(path))
                 {
-                    string prefix = await streamReader.ReadLineAsync();
+                    string? prefix = await streamReader.ReadLineAsync();
                     string subtitles = await streamReader.ReadToEndAsync();
                     return new Video(videoId, prefix, subtitles);
                 }
@@ -254,7 +252,7 @@ namespace SubtitleConverter
 
         private class Video
         {
-            public Video(string id, string prefix, string subtitles)
+            public Video(string id, string? prefix, string subtitles)
             {
                 Id = id;
                 Prefix = prefix;
@@ -262,7 +260,7 @@ namespace SubtitleConverter
             }
 
             public string Id { get; }
-            public string Prefix { get; }
+            public string? Prefix { get; }
             public string Subtitles { get; }
         }
     }

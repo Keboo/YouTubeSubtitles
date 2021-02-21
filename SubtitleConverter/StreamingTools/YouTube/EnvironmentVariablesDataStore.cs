@@ -4,11 +4,16 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SubtitleConverter
+namespace StreamingTools.YouTube
 {
-    class EnvironmentVariablesDataStore : IDataStore
+    public class EnvironmentVariablesDataStore : IDataStore
     {
-        private const string Prefix = "SubtitleConverter-";
+        private string Prefix { get; }
+
+        public EnvironmentVariablesDataStore(string prefix)
+        {
+            Prefix = prefix;
+        }
 
         public Task ClearAsync()
         {
@@ -27,19 +32,19 @@ namespace SubtitleConverter
             return Task.CompletedTask;
         }
 
-        public Task<T> GetAsync<T>(string key)
+        public Task<T?> GetAsync<T>(string key)
         {
-            TaskCompletionSource<T> taskCompletionSource = new TaskCompletionSource<T>();
+            TaskCompletionSource<T?> taskCompletionSource = new TaskCompletionSource<T?>();
             try
             {
-                string value = GetValue(key);
+                string? value = GetValue(key);
                 if (string.IsNullOrEmpty(value))
                 {
                     taskCompletionSource.SetResult(default);
                 }
                 else
                 {
-                    taskCompletionSource.SetResult(NewtonsoftJsonSerializer.Instance.Deserialize<T>(value));
+                    taskCompletionSource.SetResult(NewtonsoftJsonSerializer.Instance.Deserialize<T?>(value));
                 }
             }
             catch (Exception exception)
@@ -49,7 +54,7 @@ namespace SubtitleConverter
             return taskCompletionSource.Task;
         }
 
-        public static string GetValue(string key) => Environment.GetEnvironmentVariable(Prefix + key);
+        public string? GetValue(string key) => Environment.GetEnvironmentVariable(Prefix + key);
 
         public Task StoreAsync<T>(string key, T value)
         {

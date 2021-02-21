@@ -15,6 +15,8 @@ namespace DownloadSubtitle
 {
     public static class GetVideoTags
     {
+        private const string Prefix = "GoogleSubtitleConverter";
+
         [FunctionName("GetVideoTags")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
@@ -27,7 +29,7 @@ namespace DownloadSubtitle
             }
             log.LogInformation($"Looking up tags for {videoId}");
 
-            using (YouTubeService service = await YouTube.GetService())
+            using (YouTubeService service = await YouTube.GetService(Prefix))
             {
                 var videoDetailsRequest = service.Videos.List("snippet");
                 videoDetailsRequest.Id = videoId;

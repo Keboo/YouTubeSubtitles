@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.41.1.1699" />
+	<PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
+
+  </ItemGroup>
+</Project>
