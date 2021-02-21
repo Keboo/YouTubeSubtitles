@@ -18,10 +18,10 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.x
-    - name: Find sld
-      run: get-childitem -Recurse *.sln
+    - name: Find pwd
+      run: pwd
     - name: Build
-      run: dotnet build YouTubeSubtitles\SubtitleConverter\SubtitleConverter.sln
+      run: dotnet build YouTubeSubtitles\YouTubeSubtitles\SubtitleConverter\SubtitleConverter.sln
     - name: Setup FFmpeg
       # You may pin to the exact commit or the version.
       # uses: FedericoCarboni/setup-ffmpeg@195514cd39ecf285ad36556ef6a3e14e3e779505
