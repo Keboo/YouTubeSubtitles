@@ -55,6 +55,7 @@ namespace VideoConverter
 
             var httpClient = new HttpClient();
             var twitchClinet = new Twitch(httpClient);
+
             //return;
             var videoResponse = await api.Helix.Videos.GetVideoAsync(userId: twitchUserId);
 
@@ -66,18 +67,18 @@ namespace VideoConverter
                     .FirstOrDefault() != null;
                 if (alreadyProcessed) continue;
                                 
-                string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
-
-                string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
-                File.Delete(downloadedFilePath);
-
-                string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
+                //string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
+                //
+                //string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
+                //File.Delete(downloadedFilePath);
+                //
+                //string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
 
                 var videoRow = new VideoRow
                 {
                     PartitionKey = nameof(VideoConverter),
                     TwitchVideoId = video.Id,
-                    YoutubeVideoId = youTubeId
+                    YoutubeVideoId = "Unknown"
                 };
                 TableOperation insertOperation = TableOperation.InsertOrReplace(videoRow);
 
