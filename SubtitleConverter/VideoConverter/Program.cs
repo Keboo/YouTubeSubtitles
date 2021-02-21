@@ -78,6 +78,7 @@ namespace VideoConverter
                 {
                     PartitionKey = nameof(VideoConverter),
                     TwitchVideoId = video.Id,
+                    TwitchPublishedAt = DateTime.Parse(video.PublishedAt ?? video.CreatedAt),
                     YoutubeVideoId = "Unknown"
                 };
                 TableOperation insertOperation = TableOperation.InsertOrReplace(videoRow);
