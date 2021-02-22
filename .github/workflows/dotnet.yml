@@ -18,16 +18,16 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.x
-    - name: Find pwd
-      run: pwd
-    - name: Build
-      run: dotnet build SubtitleConverter.sln
+    #- name: Find pwd
+    #  run: pwd
+    #- name: Build
+    #  run: dotnet build SubtitleConverter.sln
     - name: Setup FFmpeg
       # You may pin to the exact commit or the version.
       # uses: FedericoCarboni/setup-ffmpeg@195514cd39ecf285ad36556ef6a3e14e3e779505
       uses: FedericoCarboni/setup-ffmpeg@v1-beta
     - name: Run
-      run: dotnet run --no-build --no-restore --project VideoConverter\VideoConverter.csproj -- 
+      run: dotnet run --project VideoConverter\VideoConverter.csproj -- 
         --twitch-user-id ${{ secrets.TWITCH_USER_ID }}
         --twitch-client-id ${{ secrets.TWITCH_CLIENT_ID }}
         --twitch-client-secret ${{ secrets.TWITCH_CLIENT_SECRET }}
