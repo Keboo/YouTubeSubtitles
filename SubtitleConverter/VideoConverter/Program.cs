@@ -8,6 +8,7 @@ using StreamingTools.Azure;
 using StreamingTools.Twitch;
 using StreamingTools.YouTube;
 using System;
+using System.Collections.Generic;
 using System.CommandLine;
 using System.CommandLine.IO;
 using System.IO;
@@ -122,18 +123,54 @@ namespace VideoConverter
                 youTubeClientSecret,
                 YouTubeService.Scope.Youtube, YouTubeService.Scope.YoutubeUpload);
 
+            string description = video.Description;
+
+
+            List<string> tags = new()
+            {
+                "twitch",
+                "programming"
+            };
+            if (video.Title.Contains("C#"))
+            {
+                tags.Add("C#");
+            }
+            if (video.Title.Contains("WPF"))
+            {
+                tags.Add("WPF");
+            }
+            if (video.Title.Contains("XAML"))
+            {
+                tags.Add("XAML");
+            }
+            if (video.Title.Contains("Material Design"))
+            {
+                description += Environment.NewLine + "MaterialDesignInXAML Project: https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit";
+                tags.Add("material design");
+            }
+
+            description += Environment.NewLine + $"Broadcasted live on Twitch -- Watch live at https://www.twitch.tv/kitokeboo";
+
             var videoUpload = new YouTubeVideo
             {
                 Snippet = new VideoSnippet
                 {
                     Title = video.Title,
-                    Description = video.Description,
-                    //Tags = new string[] { "tag1", "tag2" }, //TODO
+                    Description = description,
+                    Tags = tags.ToArray(),
+                    //TODO: Should probably query this rather than hard coded....
                     CategoryId = "28", // See https://developers.google.com/youtube/v3/docs/videoCategories/list
                 },
                 Status = new VideoStatus
                 {
-                    PrivacyStatus = "unlisted" // or "private" or "public"
+                    PrivacyStatus = "unlisted", // or "private" or "public"
+                    //TODO: Just testing out the future publish setting, may not want to set this here.
+                    PublishAt = DateTime.UtcNow + TimeSpan.FromDays(15),
+                },
+                RecordingDetails = new()
+                {
+                    LocationDescription = "Spokane WA",
+                    RecordingDate = DateTime.Parse(video.PublishedAt ?? video.CreatedAt),
                 }
             };
 
