@@ -77,11 +77,14 @@ namespace VideoConverter
                 console.Out.WriteLine($"Processing Twitch video {video.Id}");
 
                 string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
-                
+                console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
+
                 string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
+                console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
                 File.Delete(downloadedFilePath);
-                
+
                 string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
+                console.Out.WriteLine($"Uploaded to YouTube '{youTubeId}'");
 
                 var videoRow = new VideoRow
                 {
