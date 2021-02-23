@@ -1,12 +1,16 @@
-﻿using Microsoft.Azure.Cosmos.Table;
+using Microsoft.Azure.Cosmos.Table;
 using System;
 
 namespace VideoConverter
 {
     public class VideoRow : TableEntity
     {
-        public string TwitchVideoId { get; set; }
+        public string TwitchVideoId 
+        {
+            get => RowKey;
+            set => RowKey = value;
+        }
         public DateTime TwitchPublishedAt { get; set; }
-        public string YoutubeVideoId { get; set; }
+        public string YouTubeVideoId { get; set; }
     }
 }

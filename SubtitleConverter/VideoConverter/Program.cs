@@ -1,9 +1,8 @@
-﻿using Google.Apis.Upload;
+using Google.Apis.Upload;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Configuration;
-using StreamingTools;
 using StreamingTools.Azure;
 using StreamingTools.Twitch;
 using StreamingTools.YouTube;
@@ -63,7 +62,8 @@ namespace VideoConverter
             {
                 // Check if video exists in storage
                 bool alreadyProcessed = streamVideoTables.CreateQuery<VideoRow>()
-                    .Where(x => x.TwitchVideoId == video.Id && x.YoutubeVideoId == null)
+                    .Where(x => x.PartitionKey == nameof(VideoConverter) && x.TwitchVideoId == video.Id && x.YouTubeVideoId == "")
+                    .Select(x => new VideoRow() { PartitionKey = x.PartitionKey, RowKey = x.RowKey })
                     .FirstOrDefault() != null;
                 if (alreadyProcessed) continue;
                                 
@@ -79,7 +79,7 @@ namespace VideoConverter
                     PartitionKey = nameof(VideoConverter),
                     TwitchVideoId = video.Id,
                     TwitchPublishedAt = DateTime.Parse(video.PublishedAt ?? video.CreatedAt),
-                    YoutubeVideoId = "Unknown"
+                    YouTubeVideoId = "Unknown"
                 };
                 TableOperation insertOperation = TableOperation.InsertOrReplace(videoRow);
 
