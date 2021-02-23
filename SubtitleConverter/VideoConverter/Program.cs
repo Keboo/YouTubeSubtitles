@@ -76,26 +76,24 @@ namespace VideoConverter
                 }
                 console.Out.WriteLine($"Processing Twitch video {video.Id}");
 
-                //string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
-                //console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
-                //
-                //string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
-                //if (string.IsNullOrWhiteSpace(trimmedFilePath))
-                //{
-                //    console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
-                //    return 1;
-                //}
-                //console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
-                //File.Delete(downloadedFilePath);
-                //
-                //string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
-                //if (string.IsNullOrWhiteSpace(youTubeId))
-                //{
-                //    console.Error.WriteLine($"Failed to upload '{trimmedFilePath}'");
-                //    return 1;
-                //}
-                string youTubeId = "Kevin";
-
+                string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
+                console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
+                
+                string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
+                if (string.IsNullOrWhiteSpace(trimmedFilePath))
+                {
+                    console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
+                    return 1;
+                }
+                console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
+                File.Delete(downloadedFilePath);
+                
+                string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
+                if (string.IsNullOrWhiteSpace(youTubeId))
+                {
+                    console.Error.WriteLine($"Failed to upload '{trimmedFilePath}'");
+                    return 1;
+                }
                 console.Out.WriteLine($"Uploaded to YouTube '{youTubeId}'");
 
                 var videoRow = new VideoRow
@@ -116,21 +114,21 @@ namespace VideoConverter
         }
 
         private static async Task<string> UploadVideoAsync(string videoPath, TwitchVideo video, CloudTable youtubeSettingsTable,
-            string youTubeClientId, string youTubeClientSecret)
+            string youTubeClientId, string youTubeClientSecret, IConsole console)
         {
             var service = await YouTubeFactory.GetServiceAsync(
                 new CloudTableDataStore(youtubeSettingsTable, nameof(VideoConverter)), 
                 youTubeClientId,
                 youTubeClientSecret,
                 YouTubeService.Scope.Youtube, YouTubeService.Scope.YoutubeUpload);
-            
+
             var videoUpload = new YouTubeVideo
             {
                 Snippet = new VideoSnippet
                 {
                     Title = video.Title,
                     Description = video.Description,
-                    //Tags = new string[] { "tag1", "tag2" },
+                    //Tags = new string[] { "tag1", "tag2" }, //TODO
                     CategoryId = "28", // See https://developers.google.com/youtube/v3/docs/videoCategories/list
                 },
                 Status = new VideoStatus
@@ -153,11 +151,11 @@ namespace VideoConverter
                 switch (progress.Status)
                 {
                     case UploadStatus.Uploading:
-                        Console.WriteLine("{0} bytes sent.", progress.BytesSent);
+                        //Console.WriteLine("{0} bytes sent.", progress.BytesSent);
                         break;
 
                     case UploadStatus.Failed:
-                        Console.WriteLine("An error prevented the upload from completing.\n{0}", progress.Exception);
+                        console.Out.WriteLine($"An error prevented the upload from completing.\n{progress.Exception}");
                         break;
                 }
             }
@@ -165,7 +163,7 @@ namespace VideoConverter
             void ResponseReceived(YouTubeVideo video)
             {
                 videoId = video.Id;
-                Console.WriteLine("Video id '{0}' was successfully uploaded.", video.Id);
+                console.Out.WriteLine($"Video id '{video.Id}' was successfully uploaded.");
             }
         }
     }
