@@ -169,7 +169,7 @@ namespace VideoConverter
                 },
                 RecordingDetails = new()
                 {
-                    LocationDescription = "Spokane WA",
+                    //LocationDescription = "Spokane WA",
                     RecordingDate = DateTime.Parse(video.PublishedAt ?? video.CreatedAt),
                 }
             };
