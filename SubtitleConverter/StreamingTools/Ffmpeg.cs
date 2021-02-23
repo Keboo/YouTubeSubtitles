@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -16,7 +16,7 @@ namespace StreamingTools
             var startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-i \"{filePath}\" -af silencedetect=n=0.001 -c copy -f null -",
+                Arguments = $"-i \"{filePath}\" -af silencedetect=n=0.001 -f null -",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false
