@@ -86,7 +86,7 @@ namespace VideoConverter
                 // Execute the operation.
                 TableResult _ = await streamVideoTables.ExecuteAsync(insertOperation);
 
-                break;
+                //break;
             }
         }
 
