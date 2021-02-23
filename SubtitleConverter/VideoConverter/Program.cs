@@ -3,10 +3,13 @@ using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Configuration;
+using StreamingTools;
 using StreamingTools.Azure;
 using StreamingTools.Twitch;
 using StreamingTools.YouTube;
 using System;
+using System.CommandLine;
+using System.CommandLine.IO;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -21,6 +24,7 @@ namespace VideoConverter
     class Program
     {
         public static async Task Main(
+            IConsole console,
             string? twitchUserId = null,
             string? twitchClientId = null,
             string? twitchClientSecret = null,
@@ -65,14 +69,19 @@ namespace VideoConverter
                     .Where(x => x.PartitionKey == nameof(VideoConverter) && x.TwitchVideoId == video.Id && x.YouTubeVideoId == "")
                     .Select(x => new VideoRow() { PartitionKey = x.PartitionKey, RowKey = x.RowKey })
                     .FirstOrDefault() != null;
-                if (alreadyProcessed) continue;
-                                
-                //string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
-                //
-                //string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
-                //File.Delete(downloadedFilePath);
-                //
-                //string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
+                if (alreadyProcessed)
+                {
+                    console.Out.WriteLine($"Twitch video {video.Id} already processed; skipping");
+                    continue;
+                }
+                console.Out.WriteLine($"Processing Twitch video {video.Id}");
+
+                string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
+                
+                string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
+                File.Delete(downloadedFilePath);
+                
+                string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
 
                 var videoRow = new VideoRow
                 {
@@ -86,7 +95,7 @@ namespace VideoConverter
                 // Execute the operation.
                 TableResult _ = await streamVideoTables.ExecuteAsync(insertOperation);
 
-                //break;
+                break;
             }
         }
 
