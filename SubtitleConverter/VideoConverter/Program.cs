@@ -65,35 +65,36 @@ namespace VideoConverter
             foreach (TwitchVideo video in videoResponse.Videos)
             {
                 // Check if video exists in storage
-                bool alreadyProcessed = streamVideoTables.CreateQuery<VideoRow>()
-                    .Where(x => x.PartitionKey == nameof(VideoConverter) && x.TwitchVideoId == video.Id && x.YouTubeVideoId == "")
-                    .Select(x => new VideoRow() { PartitionKey = x.PartitionKey, RowKey = x.RowKey })
-                    .FirstOrDefault() != null;
-                if (alreadyProcessed)
+                var row = streamVideoTables.CreateQuery<VideoRow>()
+                    .Where(x => x.PartitionKey == nameof(VideoConverter) && x.TwitchVideoId == video.Id)
+                    .Select(x => new VideoRow() { PartitionKey = x.PartitionKey, RowKey = x.RowKey, TwitchVideoId = x.TwitchVideoId, YouTubeVideoId = x.YouTubeVideoId })
+                    .FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(row?.YouTubeVideoId))
                 {
-                    console.Out.WriteLine($"Twitch video {video.Id} already processed; skipping");
+                    console.Out.WriteLine($"Twitch video {video.Id} already has YouTube id '{row.YouTubeVideoId}'; skipping");
                     continue;
                 }
                 console.Out.WriteLine($"Processing Twitch video {video.Id}");
 
-                string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
-                console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
-
-                string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
-                if (string.IsNullOrWhiteSpace(trimmedFilePath))
-                {
-                    console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
-                    return 1;
-                }
-                console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
-                File.Delete(downloadedFilePath);
-
-                string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
-                if (string.IsNullOrWhiteSpace(youTubeId))
-                {
-                    console.Error.WriteLine($"Failed to upload '{trimmedFilePath}'");
-                    return 1;
-                }
+                //string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
+                //console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
+                //
+                //string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
+                //if (string.IsNullOrWhiteSpace(trimmedFilePath))
+                //{
+                //    console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
+                //    return 1;
+                //}
+                //console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
+                //File.Delete(downloadedFilePath);
+                //
+                //string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
+                //if (string.IsNullOrWhiteSpace(youTubeId))
+                //{
+                //    console.Error.WriteLine($"Failed to upload '{trimmedFilePath}'");
+                //    return 1;
+                //}
+                string youTubeId = "Kevin";
 
                 console.Out.WriteLine($"Uploaded to YouTube '{youTubeId}'");
 
