@@ -88,7 +88,7 @@ namespace VideoConverter
                 console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
                 File.Delete(downloadedFilePath);
                 
-                string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
+                string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret, console);
                 if (string.IsNullOrWhiteSpace(youTubeId))
                 {
                     console.Error.WriteLine($"Failed to upload '{trimmedFilePath}'");
