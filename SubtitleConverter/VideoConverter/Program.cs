@@ -169,13 +169,14 @@ namespace VideoConverter
                 },
                 RecordingDetails = new()
                 {
-                    //LocationDescription = "Spokane WA",
+                    LocationDescription = "Spokane WA",
                     RecordingDate = DateTime.Parse(video.PublishedAt ?? video.CreatedAt),
                 }
             };
 
             using var fileStream = new FileStream(videoPath, FileMode.Open);
-            var videosInsertRequest = service.Videos.Insert(videoUpload, "snippet,status", fileStream, "video/*");
+            //Parts https://developers.google.com/youtube/v3/getting-started#part
+            var videosInsertRequest = service.Videos.Insert(videoUpload, "snippet,status,recordingDetails", fileStream, "video/*");
             videosInsertRequest.ProgressChanged += ProgressChanged;
             videosInsertRequest.ResponseReceived += ResponseReceived;
 
