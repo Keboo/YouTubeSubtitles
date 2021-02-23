@@ -23,7 +23,7 @@ namespace VideoConverter
 {
     class Program
     {
-        public static async Task Main(
+        public static async Task<int> Main(
             IConsole console,
             string? twitchUserId = null,
             string? twitchClientId = null,
@@ -80,10 +80,21 @@ namespace VideoConverter
                 console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
 
                 string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
+                if (string.IsNullOrWhiteSpace(trimmedFilePath))
+                {
+                    console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
+                    return 1;
+                }
                 console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
                 File.Delete(downloadedFilePath);
 
                 string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret);
+                if (string.IsNullOrWhiteSpace(youTubeId))
+                {
+                    console.Error.WriteLine($"Failed to upload '{trimmedFilePath}'");
+                    return 1;
+                }
+
                 console.Out.WriteLine($"Uploaded to YouTube '{youTubeId}'");
 
                 var videoRow = new VideoRow
@@ -100,6 +111,7 @@ namespace VideoConverter
 
                 break;
             }
+            return 0;
         }
 
         private static async Task<string> UploadVideoAsync(string videoPath, TwitchVideo video, CloudTable youtubeSettingsTable,

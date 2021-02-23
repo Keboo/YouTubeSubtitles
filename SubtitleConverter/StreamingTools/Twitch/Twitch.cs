@@ -35,7 +35,7 @@ namespace StreamingTools.Twitch
             var startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-i {playlistUrl} -c copy -y \"{tempFile}\""
+                Arguments = $"-i {playlistUrl} -c copy -loglevel quiet -y \"{tempFile}\""
             };
             if (Process.Start(startInfo) is { } ffmpegProcess)
             {
