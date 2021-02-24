@@ -45,7 +45,7 @@ namespace VideoConverter
             azureStorageAccountKey ??= section["AzureStorageAccountKey"] ?? throw new InvalidOperationException("No Azure storage account key specified");
             youTubeClientId ??= section["YouTubeClientId"] ?? throw new InvalidOperationException("No YouTube client id specified");
             youTubeClientSecret ??= section["YouTubeClientSecret"] ?? throw new InvalidOperationException("No YouTube client secret specified");
-            
+
             var storageAccount = CloudStorageAccount.Parse($"DefaultEndpointsProtocol=https;AccountName=streamautomation;AccountKey={azureStorageAccountKey};EndpointSuffix=core.windows.net");
             var tableClient = storageAccount.CreateCloudTableClient();
             var streamVideoTables = tableClient.GetTableReference("streamvideos");
@@ -79,7 +79,7 @@ namespace VideoConverter
 
                 string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
                 console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
-                
+
                 string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
                 if (string.IsNullOrWhiteSpace(trimmedFilePath))
                 {
@@ -88,7 +88,7 @@ namespace VideoConverter
                 }
                 console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
                 File.Delete(downloadedFilePath);
-                
+
                 string youTubeId = await UploadVideoAsync(trimmedFilePath, video, youtubeSettingsTable, youTubeClientId, youTubeClientSecret, console);
                 if (string.IsNullOrWhiteSpace(youTubeId))
                 {
@@ -118,7 +118,7 @@ namespace VideoConverter
             string youTubeClientId, string youTubeClientSecret, IConsole console)
         {
             var service = await YouTubeFactory.GetServiceAsync(
-                new CloudTableDataStore(youtubeSettingsTable, nameof(VideoConverter)), 
+                new CloudTableDataStore(youtubeSettingsTable, nameof(VideoConverter)),
                 youTubeClientId,
                 youTubeClientSecret,
                 YouTubeService.Scope.Youtube, YouTubeService.Scope.YoutubeUpload);
@@ -159,7 +159,7 @@ namespace VideoConverter
                     Description = description,
                     Tags = tags.ToArray(),
                     //TODO: Should probably query this rather than hard coded....
-                    CategoryId = "28", // See https://developers.google.com/youtube/v3/docs/videoCategories/list
+                    CategoryId = "28", // See https://developers.google.com/youtube/v3/docs/videoCategories/list,
                 },
                 Status = new VideoStatus
                 {
@@ -169,7 +169,13 @@ namespace VideoConverter
                 },
                 RecordingDetails = new()
                 {
-                    LocationDescription = "Spokane WA",
+                    LocationDescription = "Spokane",
+                    Location = new()
+                    {
+                        Latitude = 47.6587802,
+                        Longitude = -117.4260465,
+                        Altitude = 0
+                    },
                     RecordingDate = DateTime.Parse(video.PublishedAt ?? video.CreatedAt),
                 }
             };
