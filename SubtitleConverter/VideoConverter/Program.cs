@@ -128,7 +128,6 @@ namespace VideoConverter
 
             List<string> tags = new()
             {
-                "twitch",
                 "programming"
             };
             if (video.Title.Contains("C#"))
@@ -149,7 +148,7 @@ namespace VideoConverter
                 tags.Add("material design");
             }
 
-            description += Environment.NewLine + $"Broadcasted live on Twitch -- Watch live at https://www.twitch.tv/kitokeboo";
+            description += Environment.NewLine + Environment.NewLine + $"Broadcasted live on Twitch -- Watch live at https://www.twitch.tv/kitokeboo";
 
             var videoUpload = new YouTubeVideo
             {
@@ -158,12 +157,13 @@ namespace VideoConverter
                     Title = video.Title,
                     Description = description,
                     Tags = tags.ToArray(),
+                    DefaultLanguage = "English",
                     //TODO: Should probably query this rather than hard coded....
                     CategoryId = "28", // See https://developers.google.com/youtube/v3/docs/videoCategories/list,
                 },
                 Status = new VideoStatus
                 {
-                    PrivacyStatus = "unlisted", // or "private" or "public"
+                    PrivacyStatus = "private", // or "unlisted" "private" or "public"
                     //TODO: Just testing out the future publish setting, may not want to set this here.
                     //PublishAt = DateTime.UtcNow + TimeSpan.FromDays(15),
                 },
