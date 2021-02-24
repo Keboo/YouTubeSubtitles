@@ -11,6 +11,6 @@ namespace VideoConverter
             set => RowKey = value;
         }
         public DateTime TwitchPublishedAt { get; set; }
-        public string YouTubeVideoId { get; set; }
+        public string? YouTubeVideoId { get; set; }
     }
 }

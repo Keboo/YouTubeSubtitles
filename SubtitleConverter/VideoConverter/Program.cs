@@ -165,7 +165,7 @@ namespace VideoConverter
                 {
                     PrivacyStatus = "unlisted", // or "private" or "public"
                     //TODO: Just testing out the future publish setting, may not want to set this here.
-                    PublishAt = DateTime.UtcNow + TimeSpan.FromDays(15),
+                    //PublishAt = DateTime.UtcNow + TimeSpan.FromDays(15),
                 },
                 RecordingDetails = new()
                 {
