@@ -1,18 +1,18 @@
-﻿using System;
-using System.CommandLine;
-using Google.Apis.Auth.OAuth2;
+﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
+using Google.Apis.YouTube.v3.Data;
+using StreamingTools.YouTube;
+using System;
+using System.CommandLine;
+using System.CommandLine.IO;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Google.Apis.YouTube.v3.Data;
-using System.Net.Http;
-using StreamingTools;
-using StreamingTools.YouTube;
 
 namespace SubtitleConverter
 {
@@ -29,6 +29,9 @@ namespace SubtitleConverter
         /// <param name="outputDirectory">The directory where markdown files should be created.</param>
         /// <param name="cacheDirectory">The directory subtitle files will be cached.</param>
         /// <param name="useEnvironmentVariablesForAuth">Attempt to store/load data from environment variables</param>
+        /// <param name="azureStorageAccountKey"></param>
+        /// <param name="youTubeClientId"></param>
+        /// <param name="youTubeClientSecret"></param>
         /// <param name="console"></param>
         /// <returns></returns>
         static async Task<int> Main(
@@ -38,6 +41,9 @@ namespace SubtitleConverter
             string outputDirectory = ".",
             string cacheDirectory = ".\\cache",
             bool useEnvironmentVariablesForAuth = false,
+            string? azureStorageAccountKey = null,
+            string? youTubeClientId = null,
+            string? youTubeClientSecret = null,
             IConsole? console = null)
         {
             if (console is null) throw new ArgumentNullException(nameof(console));
@@ -59,31 +65,31 @@ namespace SubtitleConverter
 
             UserCredential credential;
 
-            using (var cts = new CancellationTokenSource())
+            using var cts = new CancellationTokenSource();
+
+            cts.CancelAfter(TimeSpan.FromMinutes(1));
+
+            console.Out.WriteLine($"Loading auth data from {(useEnvironmentVariablesForAuth ? "<ENVIRONMENT VARIABLES>" : "auth_cache folder")}");
+            IDataStore dataStore = useEnvironmentVariablesForAuth ? (IDataStore)new EnvironmentVariablesDataStore("SubtitleConverter-") : new FileDataStore(Path.GetFullPath("auth_cache"), true);
+
+            GoogleClientSecrets secrets = GetClientSecrets(useEnvironmentVariablesForAuth, console);
+
+            if (secrets?.Secrets == null)
             {
-                cts.CancelAfter(TimeSpan.FromMinutes(1));
-
-                console.Out.WriteLine($"Loading auth data from {(useEnvironmentVariablesForAuth ? "<ENVIRONMENT VARIABLES>" : "auth_cache folder")}");
-                IDataStore dataStore = useEnvironmentVariablesForAuth ? (IDataStore)new EnvironmentVariablesDataStore("SubtitleConverter-") : new FileDataStore(Path.GetFullPath("auth_cache"), true);
-
-                GoogleClientSecrets secrets = GetClientSecrets(useEnvironmentVariablesForAuth, console);
-
-                if (secrets?.Secrets == null)
-                {
-                    console.Error.WriteLine("Did not find client auth secrets");
-                    return 1;
-                }
-
-                credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
-                    secrets.Secrets,
-                    // This OAuth 2.0 access scope allows for full read/write access to the
-                    // authenticated user's account.
-                    new[] { YouTubeService.Scope.YoutubeForceSsl, YouTubeService.Scope.Youtube },
-                    "UserAuth",
-                    cts.Token,
-                    dataStore
-                );
+                console.Error.WriteLine("Did not find client auth secrets");
+                return 1;
             }
+
+            credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
+                secrets.Secrets,
+                // This OAuth 2.0 access scope allows for full read/write access to the
+                // authenticated user's account.
+                new[] { YouTubeService.Scope.YoutubeForceSsl, YouTubeService.Scope.Youtube },
+                "UserAuth",
+                cts.Token,
+                dataStore
+            );
+
 
             var service = new YouTubeService(new BaseClientService.Initializer
             {
@@ -150,7 +156,8 @@ namespace SubtitleConverter
             }
         }
 
-        private static async Task ConvertVideoCaptions(string videoId, string outputDirectory, YouTubeService service, IConsole console, DirectoryInfo cacheDirectory)
+        private static async Task ConvertVideoCaptions(string videoId, string outputDirectory, YouTubeService service, 
+            IConsole console, DirectoryInfo cacheDirectory)
         {
             console.Out.WriteLine($"Processing video {videoId}");
 
@@ -210,12 +217,10 @@ namespace SubtitleConverter
 
             if (File.Exists(path))
             {
-                using (var streamReader = new StreamReader(path))
-                {
-                    string? prefix = await streamReader.ReadLineAsync();
-                    string subtitles = await streamReader.ReadToEndAsync();
-                    return new Video(videoId, prefix, subtitles);
-                }
+                using var streamReader = new StreamReader(path);
+                string? prefix = await streamReader.ReadLineAsync();
+                string subtitles = await streamReader.ReadToEndAsync();
+                return new Video(videoId, prefix, subtitles);
             }
 
             var captionRequest = service.Captions.List("id", videoId);
@@ -250,18 +255,8 @@ namespace SubtitleConverter
             return null;
         }
 
-        private class Video
+        private record Video(string Id, string? Prefix, string Subtitles)
         {
-            public Video(string id, string? prefix, string subtitles)
-            {
-                Id = id;
-                Prefix = prefix;
-                Subtitles = subtitles;
-            }
-
-            public string Id { get; }
-            public string? Prefix { get; }
-            public string Subtitles { get; }
         }
     }
 }

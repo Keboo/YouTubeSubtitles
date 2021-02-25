@@ -11,7 +11,6 @@ namespace StreamingTools.YouTube
 {
     public static class YouTubeFactory
     {
-
         public static async Task<YouTubeService> GetService(string prefix)
         {
             return await GetServiceAsync(new EnvironmentVariablesDataStore(prefix), null, null);

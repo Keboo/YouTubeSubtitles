@@ -1,0 +1,30 @@
+name: Create Subtitles
+
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: '0 9 * * *'
+
+defaults:
+  run:
+    working-directory: SubtitleConverter
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+    #- name: Run
+    #  run: dotnet run --project VideoConverter\VideoConverter.csproj -- 
+    #    --twitch-user-id ${{ secrets.TWITCH_USER_ID }}
+    #    --twitch-client-id ${{ secrets.TWITCH_CLIENT_ID }}
+    #    --twitch-client-secret ${{ secrets.TWITCH_CLIENT_SECRET }}
+    #    --azure-storage-account-key ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
+    #    --you-tube-client-id ${{ secrets.YOUTUBE_CLIENT_ID }}
+    #    --you-tube-client-secret ${{ secrets.YOUTUBE_CLIENT_SECRET }}
