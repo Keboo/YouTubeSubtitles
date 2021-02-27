@@ -42,11 +42,8 @@ namespace VideoConverter
             twitchUserId ??= section["TwitchUserId"] ?? throw new InvalidOperationException("No Twitch user id specified");
             twitchClientId ??= section["TwitchClientId"] ?? throw new InvalidOperationException("No Twitch client id specified");
             twitchClientSecret ??= section["TwitchClientSecret"] ?? throw new InvalidOperationException("No Twitch client secret specified");
-            azureStorageAccountKey ??= section["AzureStorageAccountKey"] ?? throw new InvalidOperationException("No Azure storage account key specified");
-            youTubeClientId ??= section["YouTubeClientId"] ?? throw new InvalidOperationException("No YouTube client id specified");
-            youTubeClientSecret ??= section["YouTubeClientSecret"] ?? throw new InvalidOperationException("No YouTube client secret specified");
-
-            var storageAccount = CloudStorageAccount.Parse($"DefaultEndpointsProtocol=https;AccountName=streamautomation;AccountKey={azureStorageAccountKey};EndpointSuffix=core.windows.net");
+            
+            var storageAccount = StorageAccount.Get(azureStorageAccountKey, config);
             var tableClient = storageAccount.CreateCloudTableClient();
             var streamVideoTables = tableClient.GetTableReference("streamvideos");
             var youtubeSettingsTable = tableClient.GetTableReference("youtubesettings");
@@ -58,7 +55,8 @@ namespace VideoConverter
             });
 
             YouTubeService youTubeService = await YouTubeFactory.GetServiceAsync(
-                new CloudTableDataStore(youtubeSettingsTable, nameof(VideoConverter)),
+                new CloudTableDataStore(youtubeSettingsTable),
+                config,
                 youTubeClientId,
                 youTubeClientSecret,
                 YouTubeService.Scope.Youtube, YouTubeService.Scope.YoutubeUpload);
@@ -74,7 +72,13 @@ namespace VideoConverter
                 // Check if video exists in storage
                 var row = streamVideoTables.CreateQuery<VideoRow>()
                     .Where(x => x.PartitionKey == nameof(VideoConverter) && x.TwitchVideoId == video.Id)
-                    .Select(x => new VideoRow() { PartitionKey = x.PartitionKey, RowKey = x.RowKey, TwitchVideoId = x.TwitchVideoId, YouTubeVideoId = x.YouTubeVideoId })
+                    .Select(x => new VideoRow() 
+                    { 
+                        PartitionKey = x.PartitionKey, 
+                        RowKey = x.RowKey, 
+                        TwitchVideoId = x.TwitchVideoId, 
+                        YouTubeVideoId = x.YouTubeVideoId 
+                    })
                     .FirstOrDefault();
                 if (!string.IsNullOrWhiteSpace(row?.YouTubeVideoId))
                 {
@@ -143,7 +147,7 @@ namespace VideoConverter
             }
             if (video.Title.Contains("Material Design"))
             {
-                description += Environment.NewLine + "MaterialDesignInXAML Project: https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit";
+                description += Environment.NewLine + "Material Design In XAML Project: https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit";
                 tags.Add("material design");
             }
 

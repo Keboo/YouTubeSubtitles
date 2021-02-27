@@ -14,10 +14,10 @@ namespace StreamingTools.Azure
             public string? JsonData { get; set; }
         }
 
-        public CloudTableDataStore(CloudTable table, string partitionKey)
+        public CloudTableDataStore(CloudTable table, string? partitionKey = null)
         {
             Table = table ?? throw new ArgumentNullException(nameof(table));
-            PartitionKey = partitionKey ?? throw new ArgumentNullException(nameof(partitionKey));
+            PartitionKey = partitionKey ?? "GoogleDataStore";
         }
 
         private CloudTable Table { get; }

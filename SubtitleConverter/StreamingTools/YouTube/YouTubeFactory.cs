@@ -2,6 +2,8 @@
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
+using Microsoft.Extensions.Configuration;
+using StreamingTools.Azure;
 using System;
 using System.IO;
 using System.Threading;
@@ -14,6 +16,20 @@ namespace StreamingTools.YouTube
         public static async Task<YouTubeService> GetService(string prefix)
         {
             return await GetServiceAsync(new EnvironmentVariablesDataStore(prefix), null, null);
+        }
+
+        public static async Task<YouTubeService> GetServiceAsync(
+            IDataStore dataStore, 
+            IConfiguration config,
+            string? clientId, 
+            string? clientSecret, 
+            params string[] scopes)
+        {
+            var section = config.GetSection("YouTube");
+            clientId ??= section["ClientId"] ?? throw new InvalidOperationException("No YouTube client id specified");
+            clientSecret ??= section["ClientSecret"] ?? throw new InvalidOperationException("No YouTube client secret specified");
+
+            return await GetServiceAsync(dataStore, clientId, clientSecret, scopes);
         }
 
         public static async Task<YouTubeService> GetServiceAsync(IDataStore dataStore, string? clientId, string? clientSecret, params string[] scopes)

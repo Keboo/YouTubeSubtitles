@@ -2,11 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-	<UserSecretsId>f0641d01-fdcd-4149-8dc9-dcc00ccbd7fc</UserSecretsId>
+    <UserSecretsId>f0641d01-fdcd-4149-8dc9-dcc00ccbd7fc</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine.DragonFruit" Version="0.3.0-alpha.20574.7" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="3.1.0" />
   </ItemGroup>
 
   <ItemGroup>
