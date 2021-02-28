@@ -42,7 +42,7 @@ namespace VideoConverter
             twitchUserId ??= section["TwitchUserId"] ?? throw new InvalidOperationException("No Twitch user id specified");
             twitchClientId ??= section["TwitchClientId"] ?? throw new InvalidOperationException("No Twitch client id specified");
             twitchClientSecret ??= section["TwitchClientSecret"] ?? throw new InvalidOperationException("No Twitch client secret specified");
-            
+
             var storageAccount = StorageAccount.Get(azureStorageAccountKey, config);
             var tableClient = storageAccount.CreateCloudTableClient();
             var streamVideoTables = tableClient.GetTableReference("streamvideos");

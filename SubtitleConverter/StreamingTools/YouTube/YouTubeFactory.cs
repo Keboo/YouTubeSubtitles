@@ -3,7 +3,6 @@ using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Microsoft.Extensions.Configuration;
-using StreamingTools.Azure;
 using System;
 using System.IO;
 using System.Threading;
@@ -34,7 +33,6 @@ namespace StreamingTools.YouTube
 
         public static async Task<YouTubeService> GetServiceAsync(IDataStore dataStore, string? clientId, string? clientSecret, params string[] scopes)
         {
-            //UserCredential credential;
             using var cts = new CancellationTokenSource();
 
             GoogleClientSecrets secrets = await GetClientSecrets(dataStore, clientId, clientSecret);
@@ -57,8 +55,6 @@ namespace StreamingTools.YouTube
                 HttpClientInitializer = credential,
                 ApplicationName = "StreamAutomation"
             });
-
-
 
             return service;
         }
