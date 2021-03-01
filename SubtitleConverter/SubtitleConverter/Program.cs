@@ -49,7 +49,7 @@ namespace SubtitleConverter
                 config,
                 youTubeClientId,
                 youTubeClientSecret,
-                YouTubeService.Scope.Youtube, YouTubeService.Scope.YoutubeForceSsl);
+                YouTubeService.Scope.YoutubeForceSsl);
 
             foreach (VideoRow row in streamVideoTables.CreateQuery<VideoRow>()
                         .Where(x => x.PartitionKey == "VideoConverter" &&

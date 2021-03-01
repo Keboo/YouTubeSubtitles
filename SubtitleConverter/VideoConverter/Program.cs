@@ -59,7 +59,7 @@ namespace VideoConverter
                 config,
                 youTubeClientId,
                 youTubeClientSecret,
-                YouTubeService.Scope.Youtube, YouTubeService.Scope.YoutubeUpload);
+                YouTubeService.Scope.YoutubeUpload);
 
             var httpClient = new HttpClient();
             var twitchClinet = new Twitch(httpClient);
