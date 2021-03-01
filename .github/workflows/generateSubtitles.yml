@@ -1,13 +1,9 @@
-name: Get Videos
+name: Generate Subtitles
 
 on:
   workflow_dispatch:
   schedule:
-  - cron: '0 8 * * *'
-
-defaults:
-  run:
-    working-directory: SubtitleConverter
+  - cron: '0 16 * * *'
 
 jobs:
   build:
@@ -16,17 +12,21 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        persist-credentials: true
+        fetch-depth: 0
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.x
-    - name: Setup FFmpeg
-      uses: FedericoCarboni/setup-ffmpeg@v1-beta
     - name: Run
-      run: dotnet run --project VideoConverter\VideoConverter.csproj -- 
-        --twitch-user-id ${{ secrets.TWITCH_USER_ID }}
-        --twitch-client-id ${{ secrets.TWITCH_CLIENT_ID }}
-        --twitch-client-secret ${{ secrets.TWITCH_CLIENT_SECRET }}
+      run: dotnet run --project SubtitleConverter\SubtitleConverter\SubtitleConverter.csproj -- 
+        --output-directory ./Subtitles
         --azure-storage-account-key ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
         --you-tube-client-id ${{ secrets.YOUTUBE_CLIENT_ID }}
         --you-tube-client-secret ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+    - name: Commit & Push changes
+      uses: actions-js/push@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        message: 'Updating subtitle file(s)'
