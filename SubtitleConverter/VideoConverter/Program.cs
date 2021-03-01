@@ -70,15 +70,8 @@ namespace VideoConverter
             foreach (TwitchVideo video in videoResponse.Videos)
             {
                 // Check if video exists in storage
-                var row = streamVideoTables.CreateQuery<VideoRow>()
+                VideoRow? row = streamVideoTables.CreateQuery<VideoRow>()
                     .Where(x => x.PartitionKey == nameof(VideoConverter) && x.TwitchVideoId == video.Id)
-                    .Select(x => new VideoRow() 
-                    { 
-                        PartitionKey = x.PartitionKey, 
-                        RowKey = x.RowKey, 
-                        TwitchVideoId = x.TwitchVideoId, 
-                        YouTubeVideoId = x.YouTubeVideoId 
-                    })
                     .FirstOrDefault();
                 if (!string.IsNullOrWhiteSpace(row?.YouTubeVideoId))
                 {
@@ -107,14 +100,10 @@ namespace VideoConverter
                 }
                 console.Out.WriteLine($"Uploaded to YouTube '{youTubeId}'");
 
-                var videoRow = new VideoRow
-                {
-                    PartitionKey = nameof(VideoConverter),
-                    TwitchVideoId = video.Id,
-                    TwitchPublishedAt = DateTime.Parse(video.PublishedAt ?? video.CreatedAt),
-                    YouTubeVideoId = youTubeId
-                };
-                TableOperation insertOperation = TableOperation.InsertOrReplace(videoRow);
+                row!.TwitchVideoId = video.Id;
+                row.TwitchPublishedAt = DateTime.Parse(video.PublishedAt ?? video.CreatedAt);
+                row.YouTubeVideoId = youTubeId;
+                TableOperation insertOperation = TableOperation.InsertOrMerge(row);
 
                 // Execute the operation.
                 TableResult _ = await streamVideoTables.ExecuteAsync(insertOperation);
