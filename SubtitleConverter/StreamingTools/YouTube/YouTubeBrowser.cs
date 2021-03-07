@@ -1,9 +1,16 @@
-﻿using PlaywrightSharp;
+﻿using PInvoke;
+using PlaywrightSharp;
 using System;
+using System.Buffers.Text;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using static PInvoke.User32;
 
 namespace StreamingTools.YouTube
 {
@@ -20,14 +27,18 @@ namespace StreamingTools.YouTube
             RecoveryEmail = recoveryEmail;
         }
 
+        private delegate bool EnumWindowProc(IntPtr hwnd, IntPtr lParam);
+
         public async Task UploadAsync()
         {
             string filePath = @"D:\OneDrive\Videos\Jubilee Nutcracker 2019_1.mp4";
             //string filePath = @"D:\OneDrive\Pictures\Camera Roll\VID_20210220_134134.mp4";
-
-            var base64Encode = Base64Encode(filePath);
+            //var base64Encode = Base64Encode(filePath);
+            //await base64Encode;
             using var playwright = await Playwright.CreateAsync();
+
             await using var browser = await playwright.Chromium.LaunchAsync(headless: false);
+            
             var page = await browser.NewPageAsync();
             await page.GoToAsync("https://studio.youtube.com/");
             //IElementHandle? signIn = await FirstWithText(page, "a > paper-button yt-formatted-string", "Sign In");
@@ -62,9 +73,55 @@ namespace StreamingTools.YouTube
             await page.ClickAsync("ytcp-icon-button[aria-label=\"Upload videos\"]");
 
             var tcs = new TaskCompletionSource<int>();
-            page.FileChooser += Page_FileChooser;
+            //page.FileChooser += Page_FileChooser;
+            
             await page.ClickAsync("#select-files-button");
-            await tcs.Task;
+
+            string title = await page.GetTitleAsync();
+            await Task.Delay(3000);
+            var chomeProcesses = Process.GetProcessesByName("chrome").Where(x => !string.IsNullOrWhiteSpace(x.MainWindowTitle)).ToList();
+
+            var lParam = new IntPtr(0x0000_0000);
+            foreach (var process in chomeProcesses)
+            {
+                var callback = new WNDENUMPROC((x, y) =>
+                {
+                    if (process.MainWindowHandle == User32.GetParent(x) &&
+                        User32.GetWindowText(x) == "Open")
+                    {
+                        User32.SendMessage(x, User32.WindowMessage.WM_CHAR, new IntPtr('h'), lParam);
+                        return false;
+                    }
+                    return true;
+                });
+                User32.EnumWindows(callback, IntPtr.Zero);
+
+                //User32.SendMessage(process.MainWindowHandle, User32.WindowMessage.WM_CHAR, new IntPtr('K'), lParam);
+                //
+                //int ct = 0;
+                //IntPtr prevChild = IntPtr.Zero;
+                //IntPtr currChild = IntPtr.Zero;
+                //while (true && ct < 10)
+                //{
+                //    currChild = PInvoke.User32.FindWindowEx(process.MainWindowHandle, prevChild, "#32770", null);
+                //    if (currChild == IntPtr.Zero) break;
+                //    //var info = new PInvoke.User32.WINDOWINFO();
+                //    string childTitle = PInvoke.User32.GetWindowText(currChild);
+                //    User32.SendMessage(currChild, User32.WindowMessage.WM_CHAR, new IntPtr('h'), lParam);
+                //
+                //    //if (PInvoke.User32.GetWindowInfo(currChild, ref info))
+                //    //{
+                //    //
+                //    //}
+                //    //result.Add(currChild);
+                //    prevChild = currChild;
+                //    ++ct;
+                //}
+            }
+
+            await Task.Delay(300);
+            await page.Keyboard.TypeAsync("test");
+            //await tcs.Task;
 
             //TODO: Set metadata
 
@@ -82,7 +139,6 @@ namespace StreamingTools.YouTube
             //{
             //    await Task.Delay(100);
             //}
-
             await WaitFor(() => page.IsEnabledAsync("#done-button"));
             await page.ClickAsync("#done-button");
 
@@ -95,21 +151,27 @@ namespace StreamingTools.YouTube
             {
                 page.FileChooser -= Page_FileChooser;
                 
-                await e.SetFilesAsync(new FilePayload
-                {
-                    Name = Path.GetFileName(filePath),
-                    MimeType = GetMimeType(filePath),
-                    Buffer = await base64Encode
-                });
+                //await e.SetFilesAsync(new FilePayload
+                //{
+                //    Name = Path.GetFileName(filePath),
+                //    MimeType = GetMimeType(filePath),
+                //    //Buffer = await base64Encode
+                //});
                 tcs.TrySetResult(0);
             }
         }
 
+        private static bool TestCallbase(IntPtr hwnd, IntPtr lParam)
+        {
+            return true;
+        }
+
         private static async Task<string> Base64Encode(string filePath)
         {
-            using FileStream inputFile = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 1024 * 1024, useAsync: true);
+            using FileStream inputFile = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 1024 * 1024, useAsync: false);
             using CryptoStream base64Stream = new(inputFile, new ToBase64Transform(), CryptoStreamMode.Read);
-            using var sr = new StreamReader(base64Stream);
+            
+            using var sr = new StreamReader(base64Stream, bufferSize: 1024 * 1024);
             return await sr.ReadToEndAsync();
         }
 
