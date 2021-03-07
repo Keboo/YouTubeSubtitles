@@ -45,7 +45,7 @@ namespace VideoConverter
 
             var youtubeSection = config.GetSection("YouTube");
 
-            YouTubeBrowser browser = new(youtubeSection["Username"], youtubeSection["Password"]);
+            YouTubeBrowser browser = new(youtubeSection["Username"], youtubeSection["Password"], youtubeSection["RecoveryEmail"]);
             await browser.UploadAsync();
             //var storageAccount = StorageAccount.Get(azureStorageAccountKey, config);
             //var tableClient = storageAccount.CreateCloudTableClient();

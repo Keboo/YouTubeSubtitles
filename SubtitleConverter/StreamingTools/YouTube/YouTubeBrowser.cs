@@ -1,5 +1,6 @@
 ﻿using PlaywrightSharp;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -8,17 +9,23 @@ namespace StreamingTools.YouTube
 {
     public class YouTubeBrowser
     {
-        public string Username { get; }
-        public string Password { get; }
+        private string Username { get; }
+        private string Password { get; }
+        private string RecoveryEmail { get; }
 
-        public YouTubeBrowser(string username, string password)
+        public YouTubeBrowser(string username, string password, string recoveryEmail)
         {
             Username = username;
             Password = password;
+            RecoveryEmail = recoveryEmail;
         }
 
         public async Task UploadAsync()
         {
+            string filePath = @"D:\OneDrive\Videos\Jubilee Nutcracker 2019_1.mp4";
+            //string filePath = @"D:\OneDrive\Pictures\Camera Roll\VID_20210220_134134.mp4";
+
+            var base64Encode = Base64Encode(filePath);
             using var playwright = await Playwright.CreateAsync();
             await using var browser = await playwright.Chromium.LaunchAsync(headless: false);
             var page = await browser.NewPageAsync();
@@ -26,16 +33,32 @@ namespace StreamingTools.YouTube
             //IElementHandle? signIn = await FirstWithText(page, "a > paper-button yt-formatted-string", "Sign In");
             //await signIn.ClickAsync();
             await page.TypeAsync("input[type=\"email\"]", Username);
-            await page.ClickAsync("button span");
+            await page.ClickAsync(":text('Next')");
             //await Task.Delay(TimeSpan.FromSeconds(1));
             await page.WaitForSelectorAsync("input[type=\"password\"]");
             await page.TypeAsync("input[type=\"password\"]", Password);
-            await page.ClickAsync("button span");
+            var navTask = page.WaitForNavigationAsync();
+            await page.ClickAsync(":text('Next')");
+
+            await navTask;
+            //Check for recovery prompts
+            for (int i = 0; i < 300; i++)
+            {
+                if (await page.QuerySelectorAsync("#avatar-btn") is not null) break;
+
+                if (await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
+                {
+                    await confirmEmailLink.ClickAsync();
+                    await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
+                    await page.ClickAsync(":text('Next')");
+                }
+                await Task.Delay(100);
+            }
+
+
             await page.ClickAsync("#avatar-btn");
-            IElementHandle? switchAccount = await FirstContainingText(page, "#endpoint", "Switch account");
-            await switchAccount.ClickAsync();
-            IElementHandle? kevinAccount = await FirstContainingText(page, "ytd-account-item-renderer", "Kevin Bost");
-            await kevinAccount.ClickAsync();
+            await page.ClickAsync(":text('Switch account')");
+            await page.ClickAsync(":text('Kevin Bost')");
             await page.ClickAsync("ytcp-icon-button[aria-label=\"Upload videos\"]");
 
             var tcs = new TaskCompletionSource<int>();
@@ -46,20 +69,21 @@ namespace StreamingTools.YouTube
             //TODO: Set metadata
 
             await page.ClickAsync("#next-button");
-            
+
             //TODO: Set cards
             await page.ClickAsync("#next-button");
 
             //Make private
             await page.ClickAsync("paper-radio-button[name=\"PRIVATE\"]");
 
-            for(string progress = await page.GetTextContentAsync(@"span.progress-label");
-                (progress ?? "").IndexOf("processing", StringComparison.OrdinalIgnoreCase) < 0;
-                progress = await page.GetTextContentAsync(@"span.progress-label"))
-            {
-                await Task.Delay(100);
-            }
+            //for (string progress = await page.GetTextContentAsync(@"span.progress-label");
+            //    (progress ?? "").Contains("processing", StringComparison.OrdinalIgnoreCase);
+            //    progress = await page.GetTextContentAsync(@"span.progress-label"))
+            //{
+            //    await Task.Delay(100);
+            //}
 
+            await WaitFor(() => page.IsEnabledAsync("#done-button"));
             await page.ClickAsync("#done-button");
 
             //IElementHandle? upload = await FirstWithText(page, "#endpoint", "Upload video");
@@ -70,41 +94,39 @@ namespace StreamingTools.YouTube
             async void Page_FileChooser(object? sender, FileChooserEventArgs e)
             {
                 page.FileChooser -= Page_FileChooser;
-                string filePath = @"C:\Users\kitok\OneDrive\Videos\Jubilee Nutcracker 2019_1.mp4";
-                using (FileStream inputFile = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None, bufferSize: 1024 * 1024, useAsync: true)) // When using `useAsync: true` you get better performance with buffers much larger than the default 4096 bytes.
-                using (CryptoStream base64Stream = new CryptoStream(inputFile, new ToBase64Transform(), CryptoStreamMode.Read))
-                using (var sr = new StreamReader(base64Stream))
-                //using (MemoryStream outputFile = new FileStream(@"C:\VeryLargeBase64File.txt", FileMode.CreateNew, FileAccess.Write, FileShare.None, bufferSize: 1024 * 1024, useAsync: true))
+                
+                await e.SetFilesAsync(new FilePayload
                 {
-                    string base64Content = await sr.ReadToEndAsync();
-                    await e.SetFilesAsync(new FilePayload
-                    {
-                        Name = Path.GetFileName(filePath),
-                        Buffer = base64Content
-                    });
-                    //await e.SetFilesAsync(@"C:\Users\kitok\OneDrive\Pictures\Camera Roll\VID_20190126_115455.mp4");
-                }
+                    Name = Path.GetFileName(filePath),
+                    MimeType = GetMimeType(filePath),
+                    Buffer = await base64Encode
+                });
                 tcs.TrySetResult(0);
             }
         }
 
-
-        private static async Task<IElementHandle?> FirstContainingText(IPage page, 
-            string selector, string text)
+        private static async Task<string> Base64Encode(string filePath)
         {
-            for (int i = 0; i < 30; i++)
-            {
-                foreach (var element in await page.QuerySelectorAllAsync(selector))
-                {
-                    string elementText = (await element.GetTextContentAsync())?.Trim() ?? "";
-                    if (elementText.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
-                    {
-                        return element;
-                    }
-                }
-            }
-            await Task.Delay(100);
-            return null;
+            using FileStream inputFile = new(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 1024 * 1024, useAsync: true);
+            using CryptoStream base64Stream = new(inputFile, new ToBase64Transform(), CryptoStreamMode.Read);
+            using var sr = new StreamReader(base64Stream);
+            return await sr.ReadToEndAsync();
+        }
+
+        private static async Task WaitFor(Func<Task<bool>> condition)
+        {
+            var sw = Stopwatch.StartNew();
+            bool state;
+            while (!(state = await condition()) && sw.Elapsed < TimeSpan.FromSeconds(30))
+            { }
+            if (!state) throw new Exception("Failed timeout while waiting for condition");
+        }
+
+        private static string GetMimeType(string filePath)
+        {
+            return typeof(PlaywrightSharp.Helpers.StringExtensions)
+                .GetMethod("MimeType", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)?
+                .Invoke(null, new object?[] { filePath }) as string ?? "";
         }
     }
 }
