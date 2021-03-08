@@ -21,43 +21,50 @@ namespace StreamingTools
                 RedirectStandardError = true,
                 UseShellExecute = false
             };
-            var ffmpegProcess = new Process
+            double? silenceEndTime = null;
+            using (var ffmpegProcess = new Process
             {
                 StartInfo = startInfo,
                 EnableRaisingEvents = true,
-            };
-            ffmpegProcess.OutputDataReceived += FfmpegProcess_OutputDataReceived;
-            ffmpegProcess.ErrorDataReceived += FfmpegProcess_OutputDataReceived;
-
-            double? silenceEndTime = null;
-            if (!ffmpegProcess.Start()) return "";
-            ffmpegProcess.BeginOutputReadLine();
-            ffmpegProcess.BeginErrorReadLine();
-
-
-            await ffmpegProcess.WaitForExitAsync(CancellationToken.None);
-            void FfmpegProcess_OutputDataReceived(object sender, DataReceivedEventArgs e)
+            })
             {
-                if (e.Data?.ToString() is { } line &&
-                    SilenceEndRegex.Match(line) is { } match &&
-                    match.Success)
-                {
-                    silenceEndTime = double.Parse(match.Groups["EndTime"].Value);
-                    try
-                    {
-                        ffmpegProcess.OutputDataReceived -= FfmpegProcess_OutputDataReceived;
-                        ffmpegProcess.ErrorDataReceived -= FfmpegProcess_OutputDataReceived;
+                ffmpegProcess.OutputDataReceived += FfmpegProcess_OutputDataReceived;
+                ffmpegProcess.ErrorDataReceived += FfmpegProcess_OutputDataReceived;
 
-                        ffmpegProcess.Kill();
+                if (!ffmpegProcess.Start()) return "";
+                ffmpegProcess.BeginOutputReadLine();
+                ffmpegProcess.BeginErrorReadLine();
+
+                await ffmpegProcess.WaitForExitAsync(CancellationToken.None);
+                void FfmpegProcess_OutputDataReceived(object sender, DataReceivedEventArgs e)
+                {
+                    if (e.Data?.ToString() is { } line &&
+                        SilenceEndRegex.Match(line) is { } match &&
+                        match.Success)
+                    {
+                        silenceEndTime = double.Parse(match.Groups["EndTime"].Value);
+                        try
+                        {
+                            ffmpegProcess.Kill();
+                        }
+                        catch { }
                     }
-                    catch { }
                 }
+            }
+
+            foreach(var process in Process.GetProcessesByName("ffmpeg"))
+            {
+                try
+                {
+                    process.Kill();
+                }
+                catch { }
             }
 
             if (silenceEndTime is null) return "";
 
-            string outputPath = Path.Combine(Path.GetDirectoryName(filePath)!, Path.ChangeExtension(Path.GetFileNameWithoutExtension(filePath) + "_trimmed", Path.GetExtension(filePath)));
             double startSeekTime = silenceEndTime.Value - (minSilence ?? TimeSpan.FromSeconds(2)).TotalSeconds;
+            string outputPath = Path.Combine(Path.GetDirectoryName(filePath)!, Path.ChangeExtension(Path.GetFileNameWithoutExtension(filePath) + "_trimmed", Path.GetExtension(filePath)));
             startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",

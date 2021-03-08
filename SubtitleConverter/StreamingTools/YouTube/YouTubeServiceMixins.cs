@@ -16,11 +16,13 @@ namespace StreamingTools.YouTube
             if (!string.IsNullOrEmpty(captionId))
             {
                 CaptionsResource.DownloadRequest downloadRequest = service.Captions.Download(captionId);
-                downloadRequest.Tfmt = CaptionsResource.DownloadRequest.TfmtEnum.Srt;
+                downloadRequest.Tfmt = "srt";
                 return await downloadRequest.ExecuteAsync(token);
             }
 
             return null;
         }
+
+        public static async Task<string?> FindYouTubeId(this YouTubeService service, string title, )
     }
 }
