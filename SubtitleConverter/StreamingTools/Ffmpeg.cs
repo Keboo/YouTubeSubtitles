@@ -16,7 +16,7 @@ namespace StreamingTools
             var startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-i \"{filePath}\" -af silencedetect=n=0.001 -loglevel error -f null -",
+                Arguments = $"-i \"{filePath}\" -af silencedetect=n=0.001 -f null -",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false
