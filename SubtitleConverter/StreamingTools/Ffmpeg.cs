@@ -16,7 +16,7 @@ namespace StreamingTools
             var startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-i \"{filePath}\" -af silencedetect=n=0.001 -f null -",
+                Arguments = $"-i \"{filePath}\" -af silencedetect=n=0.001 -loglevel error -f null -",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false
@@ -68,7 +68,7 @@ namespace StreamingTools
             startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-ss \"{startSeekTime:N2}\" -i \"{filePath}\" -c copy -y {outputPath}"
+                Arguments = $"-ss \"{startSeekTime:N2}\" -i \"{filePath}\" -c copy -loglevel error -y {outputPath}"
             };
 
             if (Process.Start(startInfo) is { } ffmpegTrimProcess)

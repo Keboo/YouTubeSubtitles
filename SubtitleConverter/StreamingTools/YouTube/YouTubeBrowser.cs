@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using User32 = PInvoke.User32;
@@ -59,13 +58,20 @@ namespace StreamingTools.YouTube
 
                     if (await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
                     {
+                        await CaptureStateAsync(page, "Confirm");
                         await confirmEmailLink.ClickAsync();
+                    }
+                    if (page.QuerySelectorAsync("input[type=\"email\"]") is not null)
+                    {
+                        await CaptureStateAsync(page, "BeforeEmail");
                         await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
+                        await CaptureStateAsync(page, "AfterEmail");
                         await page.ClickAsync(":text('Next')");
                     }
                     await Task.Delay(100);
                 }
 
+                await CaptureStateAsync(page, "Wait For Auth");
                 await page.ClickAsync("#avatar-btn");
                 await page.ClickAsync(":text('Switch account')");
                 await page.ClickAsync(":text('Kevin Bost')");
@@ -145,21 +151,21 @@ namespace StreamingTools.YouTube
 
                 return "";
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 await CaptureStateAsync(page);
                 throw;
             }
         }
 
-        private async Task CaptureStateAsync(IPage page)
+        private async Task CaptureStateAsync(IPage page, string identifier = "")
         {
             int count = Interlocked.Increment(ref _Counter);
             string directory = Path.GetFullPath("./Data");
             Directory.CreateDirectory(directory);
 
-            await File.WriteAllTextAsync(Path.Combine(directory, $"{count}.htm"), await page.GetContentAsync());
-            await page.ScreenshotAsync(Path.Combine(directory, $"{count}.png"));
+            await File.WriteAllTextAsync(Path.Combine(directory, $"{count}{identifier}.htm"), await page.GetContentAsync());
+            await page.ScreenshotAsync(Path.Combine(directory, $"{count}{identifier}.png"));
         }
 
         private static async Task WaitFor(Func<Task<bool>> condition, TimeSpan? timeout = null)
