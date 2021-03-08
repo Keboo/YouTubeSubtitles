@@ -32,20 +32,6 @@ namespace StreamingTools.YouTube
             IReadOnlyCollection<string> playlists, 
             IReadOnlyCollection<string> tags)
         {
-            //string filePath = @"C:\Users\kitok\OneDrive\Videos\Jubilee Nutcracker 2019_1.mp4";
-            //string title = "Kevin's Test Title Video";
-            //string description = "This is a test description to make sure it works";
-            //IReadOnlyList<string> playlists = new List<string>
-            //{
-            //    "C# Programming"
-            //};
-            //IReadOnlyList<string> tags = new List<string>
-            //{
-            //    "Tag 1",
-            //    "Programming"
-            //};
-            //string filePath = @"D:\OneDrive\Videos\Jubilee Nutcracker 2019_1.mp4";
-            //string filePath = @"D:\OneDrive\Pictures\Camera Roll\VID_20210220_134134.mp4";
             using var playwright = await Playwright.CreateAsync();
 
             await using var browser = await playwright.Chromium.LaunchAsync(headless: false);
@@ -102,9 +88,6 @@ namespace StreamingTools.YouTube
                 User32.EnumWindows(callback, IntPtr.Zero);
             }
 
-            await Task.Delay(300);
-
-            //TODO: Set metadata
             var titleRequired = await page.WaitForSelectorAsync(":text('Title (required)')");
             await Task.Delay(500);
             await page.TypeAsync("#textbox[aria-label=\"Add a title that describes your video\"]", title);
@@ -129,7 +112,7 @@ namespace StreamingTools.YouTube
 
             await page.ClickAsync("#next-button");
 
-            //Set cards, can't be done until after the video is done processing
+            //Set cards can't be done until after the video is done processing
             await page.ClickAsync("#next-button");
 
             //Make private
