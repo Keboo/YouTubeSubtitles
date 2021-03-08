@@ -1,6 +1,3 @@
-using Google.Apis.Upload;
-using Google.Apis.YouTube.v3;
-using Google.Apis.YouTube.v3.Data;
 using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Configuration;
 using StreamingTools;
@@ -18,7 +15,6 @@ using System.Threading.Tasks;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
 using TwitchVideo = TwitchLib.Api.Helix.Models.Videos.GetVideos.Video;
-using YouTubeVideo = Google.Apis.YouTube.v3.Data.Video;
 
 namespace VideoConverter
 {
@@ -85,10 +81,8 @@ namespace VideoConverter
                 }
                 console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
 
-                await UploadVideoAsync(config, trimmedFilePath, video);
+                string youTubeId = await UploadVideoAsync(config, trimmedFilePath, video);
                 await DeleteFile(trimmedFilePath);
-
-                string youTubeId = "Uploaded";
 
                 if (string.IsNullOrWhiteSpace(youTubeId))
                 {
@@ -120,7 +114,7 @@ namespace VideoConverter
             return 0;
         }
 
-        private static async Task UploadVideoAsync(
+        private static async Task<string> UploadVideoAsync(
             IConfiguration config,
             string videoPath,
             TwitchVideo video)
@@ -178,7 +172,7 @@ namespace VideoConverter
             DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
 
             YouTubeBrowser browser = new(youtubeSection["Username"], youtubeSection["Password"], youtubeSection["RecoveryEmail"]);
-            await browser.UploadAsync(videoPath, video.Title, description, recordingDate, playlists, tags);
+            return await browser.UploadAsync(videoPath, video.Title, description, recordingDate, playlists, tags);
         }
 
         private static async Task DeleteFile(string file)

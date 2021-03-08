@@ -25,7 +25,7 @@ namespace StreamingTools.YouTube
             RecoveryEmail = recoveryEmail;
         }
 
-        public async Task UploadAsync(
+        public async Task<string> UploadAsync(
             string filePath, 
             string title, 
             string description, 
@@ -128,8 +128,17 @@ namespace StreamingTools.YouTube
                 string statusText = await page.GetInnerTextAsync("span.ytcp-video-upload-progress");
                 return !statusText.Contains("Uploading");
             }, TimeSpan.FromHours(2));
-            
+
+            string youtubeLink = await page.GetInnerTextAsync("span.ytcp-video-info");
+
             await page.ClickAsync("#done-button");
+
+            if (!string.IsNullOrWhiteSpace(youtubeLink) && Uri.TryCreate(youtubeLink, UriKind.Absolute, out Uri url))
+            {
+                return url.Segments.Last();
+            }
+
+            return "";
         }
 
         private static async Task WaitFor(Func<Task<bool>> condition, TimeSpan? timeout = null)
