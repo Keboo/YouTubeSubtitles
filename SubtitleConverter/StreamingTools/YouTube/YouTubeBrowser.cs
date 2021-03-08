@@ -29,6 +29,7 @@ namespace StreamingTools.YouTube
             string filePath, 
             string title, 
             string description, 
+            DateTime recordingDate,
             IReadOnlyCollection<string> playlists, 
             IReadOnlyCollection<string> tags)
         {
@@ -103,7 +104,9 @@ namespace StreamingTools.YouTube
 
             await page.ClickAsync("ytcp-text-dropdown-trigger[label=\"Recording date\"]");
             await page.PressAsync("paper-input[aria-label=\"Enter date\"] >> input", "Control+a");
-            await page.TypeAsync("paper-input[aria-label=\"Enter date\"]", $"{DateTime.Now:MM/dd/yyyy}");
+
+
+            await page.TypeAsync("paper-input[aria-label=\"Enter date\"]", $"{recordingDate:MM/dd/yyyy}");
             await page.PressAsync("paper-input[aria-label=\"Enter date\"] >> input", "Escape");
 
             await page.ClickAsync("#location >> input");

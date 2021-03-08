@@ -166,8 +166,10 @@ namespace VideoConverter
 
             var youtubeSection = config.GetSection("YouTube");
 
+            DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
+
             YouTubeBrowser browser = new(youtubeSection["Username"], youtubeSection["Password"], youtubeSection["RecoveryEmail"]);
-            await browser.UploadAsync(videoPath, video.Title, description, playlists, tags);
+            await browser.UploadAsync(videoPath, video.Title, description, recordingDate, playlists, tags);
         }
 
         private static async Task DeleteFile(string file)
