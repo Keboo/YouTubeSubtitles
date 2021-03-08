@@ -71,7 +71,7 @@ namespace VideoConverter
                     console.Out.WriteLine($"Twitch video {video.Id} already has YouTube id '{row.YouTubeVideoId}'; skipping");
                     continue;
                 }
-                console.Out.WriteLine($"Processing Twitch video {video.Id}");
+                console.Out.WriteLine($"Downloading Twitch video {video.Id}");
 
                 string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
                 console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
@@ -97,8 +97,18 @@ namespace VideoConverter
                 }
                 console.Out.WriteLine($"Uploaded to YouTube '{youTubeId}'");
 
-                row!.TwitchVideoId = video.Id;
-                row.TwitchPublishedAt = DateTime.Parse(video.PublishedAt ?? video.CreatedAt);
+
+                DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
+                if (row is null)
+                {
+                    row = new VideoRow
+                    {
+                        PartitionKey = recordingDate.Year.ToString(),
+                    };
+                }
+
+                row.TwitchVideoId = video.Id;
+                row.TwitchPublishedAt = recordingDate;
                 row.YouTubeVideoId = youTubeId;
                 TableOperation insertOperation = TableOperation.InsertOrMerge(row);
 
