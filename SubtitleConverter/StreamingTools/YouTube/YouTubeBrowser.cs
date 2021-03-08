@@ -58,21 +58,17 @@ namespace StreamingTools.YouTube
 
                     if (await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
                     {
-                        await CaptureStateAsync(page, "Confirm");
                         await confirmEmailLink.ClickAsync();
                     }
                     if (page.QuerySelectorAsync("input[type=\"email\"]") is not null)
                     {
-                        await CaptureStateAsync(page, "BeforeEmail");
                         await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
-                        await CaptureStateAsync(page, "AfterEmail");
                         await page.ClickAsync(":text('Next')");
                         break;
                     }
                     await Task.Delay(100);
                 }
 
-                await CaptureStateAsync(page, "Wait For Auth");
                 await page.ClickAsync("#avatar-btn");
                 await page.ClickAsync(":text('Switch account')");
                 await page.ClickAsync(":text('Kevin Bost')");
