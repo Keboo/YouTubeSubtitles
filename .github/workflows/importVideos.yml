@@ -30,7 +30,7 @@ jobs:
         --azure-storage-account-key ${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}
         --you-tube-username ${{ secrets.YOUTUBE_USERNAME }}
         --you-tube-password ${{ secrets.YOUTUBE_PASSWORD }}
-        --you-tube-recovery-email ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+        --you-tube-recovery-email ${{ secrets.YOUTUBE_RECOVERYEMAIL }}
     - name: Upload State
       if: ${{ always() }}
       uses: actions/upload-artifact@v2
