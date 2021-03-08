@@ -86,8 +86,11 @@ namespace VideoConverter
                 }
                 console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
 
-                string youTubeId = await UploadVideoAsync(config, trimmedFilePath, video);
+                await UploadVideoAsync(config, trimmedFilePath, video);
                 await DeleteFile(trimmedFilePath);
+
+                string youTubeId = "Uploaded";
+
                 if (string.IsNullOrWhiteSpace(youTubeId))
                 {
                     console.Error.WriteLine($"Failed to upload '{trimmedFilePath}'");
@@ -108,7 +111,7 @@ namespace VideoConverter
             return 0;
         }
 
-        private static async Task<string> UploadVideoAsync(
+        private static async Task UploadVideoAsync(
             IConfiguration config,
             string videoPath,
             TwitchVideo video)
@@ -165,7 +168,6 @@ namespace VideoConverter
 
             YouTubeBrowser browser = new(youtubeSection["Username"], youtubeSection["Password"], youtubeSection["RecoveryEmail"]);
             await browser.UploadAsync(videoPath, video.Title, description, playlists, tags);
-            return "";
         }
 
         private static async Task DeleteFile(string file)
