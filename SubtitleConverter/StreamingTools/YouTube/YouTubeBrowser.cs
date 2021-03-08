@@ -55,9 +55,12 @@ namespace StreamingTools.YouTube
 
                 if (await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
                 {
+                    await CaptureStateAsync(page);
                     await confirmEmailLink.ClickAsync();
+                    await CaptureStateAsync(page);
                     await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
                     await page.ClickAsync(":text('Next')");
+                    await CaptureStateAsync(page);
                 }
                 await Task.Delay(100);
             }
