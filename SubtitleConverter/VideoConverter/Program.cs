@@ -57,7 +57,7 @@ namespace VideoConverter
             var httpClient = new HttpClient();
             var twitchClinet = new Twitch(httpClient);
 
-            //return;
+            console.Out.WriteLine("Retrieving videos from twitch");
             var videoResponse = await api.Helix.Videos.GetVideoAsync(userId: twitchUserId);
 
             foreach (TwitchVideo video in videoResponse.Videos)

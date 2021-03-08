@@ -22,7 +22,5 @@ namespace StreamingTools.YouTube
 
             return null;
         }
-
-        public static async Task<string?> FindYouTubeId(this YouTubeService service, string title, )
     }
 }
