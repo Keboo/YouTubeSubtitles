@@ -31,3 +31,9 @@ jobs:
         --you-tube-username ${{ secrets.YOUTUBE_USERNAME }}
         --you-tube-password ${{ secrets.YOUTUBE_PASSWORD }}
         --you-tube-recovery-email ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+    - name: Upload State
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: UI Artifacts
+        path: ${{ github.workspace }}\**\Data

@@ -4,7 +4,9 @@ using PlaywrightSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using User32 = PInvoke.User32;
 
@@ -12,6 +14,7 @@ namespace StreamingTools.YouTube
 {
     public class YouTubeBrowser
     {
+        private int _Counter;
         private string Username { get; }
         private string Password { get; }
         private string RecoveryEmail { get; }
@@ -59,6 +62,7 @@ namespace StreamingTools.YouTube
                 await Task.Delay(100);
             }
 
+            await CaptureStateAsync(page);
             await page.ClickAsync("#avatar-btn");
             await page.ClickAsync(":text('Switch account')");
             await page.ClickAsync(":text('Kevin Bost')");
@@ -137,6 +141,16 @@ namespace StreamingTools.YouTube
             }
 
             return "";
+        }
+
+        private async Task CaptureStateAsync(IPage page)
+        {
+            int count = Interlocked.Increment(ref _Counter);
+            string directory = Path.GetFullPath("./Data");
+            Directory.CreateDirectory(directory);
+
+            await File.WriteAllTextAsync(Path.Combine(directory, $"{count}.htm"), await page.GetContentAsync());
+            await page.ScreenshotAsync(Path.Combine(directory, $"{count}.png"));
         }
 
         private static async Task WaitFor(Func<Task<bool>> condition, TimeSpan? timeout = null)
