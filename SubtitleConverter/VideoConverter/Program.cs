@@ -26,8 +26,9 @@ namespace VideoConverter
             string? twitchClientId = null,
             string? twitchClientSecret = null,
             string? azureStorageAccountKey = null,
-            string? youTubeClientId = null,
-            string? youTubeClientSecret = null)
+            string? youTubeUsername = null,
+            string? youTubePassword = null,
+            string? youTubeRecoveryEmail = null)
         {
             var configBuilder = new ConfigurationBuilder();
             configBuilder.AddEnvironmentVariables();
@@ -81,7 +82,12 @@ namespace VideoConverter
                 }
                 console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
 
-                string youTubeId = await UploadVideoAsync(config, trimmedFilePath, video);
+                var youtubeSection = config.GetSection("YouTube");
+                BrowserCredential creds = new(
+                    youTubeUsername ?? youtubeSection["Username"],
+                    youTubePassword ?? youtubeSection["Password"],
+                    youTubeRecoveryEmail ?? youtubeSection["RecoveryEmail"]);
+                string youTubeId = await UploadVideoAsync(creds, trimmedFilePath, video);
                 await DeleteFile(trimmedFilePath);
 
                 if (string.IsNullOrWhiteSpace(youTubeId))
@@ -115,7 +121,7 @@ namespace VideoConverter
         }
 
         private static async Task<string> UploadVideoAsync(
-            IConfiguration config,
+            BrowserCredential credential,
             string videoPath,
             TwitchVideo video)
         {
@@ -167,11 +173,9 @@ namespace VideoConverter
 
             description += Environment.NewLine + Environment.NewLine + $"Broadcasted live on Twitch -- Watch live at https://twitch.keboo.dev";
 
-            var youtubeSection = config.GetSection("YouTube");
-
             DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
 
-            YouTubeBrowser browser = new(youtubeSection["Username"], youtubeSection["Password"], youtubeSection["RecoveryEmail"]);
+            YouTubeBrowser browser = new(credential.Username, credential.Password, credential.RecoveryEmail);
             return await browser.UploadAsync(videoPath, video.Title, description, recordingDate, playlists, tags);
         }
 

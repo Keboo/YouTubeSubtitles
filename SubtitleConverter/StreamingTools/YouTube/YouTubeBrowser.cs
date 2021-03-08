@@ -4,9 +4,7 @@ using PlaywrightSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using User32 = PInvoke.User32;
 
@@ -20,9 +18,9 @@ namespace StreamingTools.YouTube
 
         public YouTubeBrowser(string username, string password, string recoveryEmail)
         {
-            Username = username;
-            Password = password;
-            RecoveryEmail = recoveryEmail;
+            Username = username ?? throw new ArgumentNullException(nameof(username));
+            Password = password ?? throw new ArgumentNullException(nameof(password));
+            RecoveryEmail = recoveryEmail ?? throw new ArgumentNullException(nameof(recoveryEmail));
         }
 
         public async Task<string> UploadAsync(
@@ -133,7 +131,7 @@ namespace StreamingTools.YouTube
 
             await page.ClickAsync("#done-button");
 
-            if (!string.IsNullOrWhiteSpace(youtubeLink) && Uri.TryCreate(youtubeLink, UriKind.Absolute, out Uri url))
+            if (!string.IsNullOrWhiteSpace(youtubeLink) && Uri.TryCreate(youtubeLink, UriKind.Absolute, out Uri? url))
             {
                 return url.Segments.Last();
             }
