@@ -67,6 +67,7 @@ namespace StreamingTools.YouTube
                         await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
                         await CaptureStateAsync(page, "AfterEmail");
                         await page.ClickAsync(":text('Next')");
+                        break;
                     }
                     await Task.Delay(100);
                 }
