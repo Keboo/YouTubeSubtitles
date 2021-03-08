@@ -73,8 +73,7 @@ namespace VideoConverter
                 }
                 console.Out.WriteLine($"Processing Twitch video {video.Id}");
 
-                string downloadedFilePath = @"C:\Users\kitok\AppData\Local\Temp\tmpA6A.mp4";
-                //string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
+                string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
                 console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
 
                 string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
