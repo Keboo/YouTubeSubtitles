@@ -52,20 +52,27 @@ namespace SubtitleConverter
                 YouTubeService.Scope.YoutubeForceSsl);
 
             foreach (VideoRow row in streamVideoTables.CreateQuery<VideoRow>()
-                        .Where(x => x.PartitionKey == "VideoConverter" &&
-                           x.YouTubeVideoId != "" &&
-                           x.YouTubeVideoId != "Unknown"))
+                        .Where(x => x.YouTubeVideoId != "" && x.YouTubeVideoId != "Unknown"))
             {
                 if (!string.IsNullOrWhiteSpace(row.SubtitlesUrl)) continue;
                 console.Out.WriteLine($"Converting markdown for YouTube video '{row.YouTubeVideoId}'");
                 if (await youTubeService.GetSubtitles(row.YouTubeVideoId!, CancellationToken.None) is { } subtitles)
                 {
-                    console.Out.WriteLine("  Got subtitles");
-                    string markdown = ConvertToMarkdown(row.YouTubeVideoId!, subtitles);
-                    string fileName = await WriteToFile(outputDirectory, markdown, row.YouTubeVideoId!, row.TwitchPublishedAt);
-                    console.Out.WriteLine($"  Wrote markdown to '{fileName}'");
+                    if (!string.IsNullOrWhiteSpace(subtitles))
+                    {
+                        console.Out.WriteLine("  Got subtitles");
+                        string markdown = ConvertToMarkdown(row.YouTubeVideoId!, subtitles);
+                        string fileName = await WriteToFile(outputDirectory, markdown, row.YouTubeVideoId!, row.TwitchPublishedAt);
+                        console.Out.WriteLine($"  Wrote markdown to '{fileName}'");
 
-                    row.SubtitlesUrl = $"https://github.com/Keboo/YouTubeSubtitles/blob/master/Subtitles/{fileName}";
+                        row.SubtitlesUrl = $"https://github.com/Keboo/YouTubeSubtitles/blob/master/Subtitles/{fileName}";
+                    }
+                    else
+                    {
+                        console.Out.WriteLine($"  YouTube video '{row.YouTubeVideoId}' not found");
+
+                        row.SubtitlesUrl = "YouTube Video Removed";
+                    }
                     TableOperation insertOperation = TableOperation.Merge(row);
                     TableResult _ = await streamVideoTables.ExecuteAsync(insertOperation);
                     console.Out.WriteLine($"  Updated table storage with url '{row.SubtitlesUrl}'");
