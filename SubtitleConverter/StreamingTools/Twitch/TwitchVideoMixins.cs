@@ -12,9 +12,8 @@ namespace StreamingTools.Twitch
             {
                 throw new ArgumentNullException(nameof(video));
             }
-            DateTime rv;
             if (!string.IsNullOrWhiteSpace(video.CreatedAt) &&
-                DateTime.TryParse(video.CreatedAt, out rv))
+                DateTime.TryParse(video.CreatedAt, out DateTime rv))
             {
                 return rv;
             }
