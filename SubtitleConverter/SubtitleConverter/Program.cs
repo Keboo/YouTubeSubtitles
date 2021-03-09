@@ -75,7 +75,7 @@ namespace SubtitleConverter
                     }
                     TableOperation insertOperation = TableOperation.Merge(row);
                     TableResult _ = await streamVideoTables.ExecuteAsync(insertOperation);
-                    console.Out.WriteLine($"  Updated table storage with url '{row.SubtitlesUrl}'");
+                    console.Out.WriteLine($"  Updated table storage url with '{row.SubtitlesUrl}'");
                 }
             }
         }
