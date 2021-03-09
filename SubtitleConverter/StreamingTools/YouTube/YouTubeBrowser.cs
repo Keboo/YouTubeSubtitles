@@ -63,8 +63,10 @@ namespace StreamingTools.YouTube
                     if (await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
                         !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
                     {
+                        await CaptureStateAsync(page);
                         await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
                         await page.ClickAsync(":text('Next')");
+                        await CaptureStateAsync(page);
                         break;
                     }
                     await Task.Delay(100);
