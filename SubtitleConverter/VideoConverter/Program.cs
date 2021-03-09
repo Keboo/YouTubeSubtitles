@@ -61,7 +61,7 @@ namespace VideoConverter
             {
                 // Check if video exists in storage
                 VideoRow? row = streamVideoTables.CreateQuery<VideoRow>()
-                    .Where(x => x.PartitionKey == nameof(VideoConverter) && x.TwitchVideoId == video.Id)
+                    .Where(x => x.TwitchVideoId == video.Id)
                     .FirstOrDefault();
                 if (!string.IsNullOrWhiteSpace(row?.YouTubeVideoId))
                 {
