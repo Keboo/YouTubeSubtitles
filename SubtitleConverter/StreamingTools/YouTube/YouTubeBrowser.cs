@@ -73,7 +73,7 @@ namespace StreamingTools.YouTube
                     await page.ClickAsync($"ytcp-ve li.ytcp-checkbox-group:has-text('{playlist}')");
                 }
                 await page.ClickAsync("ytcp-button.done-button[label=\"Done\"]");
-                await page.ClickAsync("div.ytcp-button:has-text('More options')");
+                await page.ClickAsync("div.ytcp-button:has-text('Show more')");
                 await page.TypeAsync("input[aria-label=\"Tags\"]", string.Join(',', tags));
 
                 await page.ClickAsync("ytcp-text-dropdown-trigger[label=\"Recording date\"]");
@@ -121,7 +121,7 @@ namespace StreamingTools.YouTube
             }
         }
 
-        private async Task AddFileToOpenFileDialog(IPage page, string filePath)
+        private static async Task AddFileToOpenFileDialog(IPage page, string filePath)
         {
             string windowTitle = await page.GetTitleAsync();
 
