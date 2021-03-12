@@ -51,26 +51,8 @@ namespace StreamingTools.YouTube
                 await page.ClickAsync(":text('Next')");
 
                 await navTask;
-                //Check for recovery prompts
-                for (int i = 0; i < 300; i++)
-                {
-                    if (await page.QuerySelectorAsync("#avatar-btn") is not null) break;
 
-                    if (await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
-                    {
-                        await confirmEmailLink.ClickAsync();
-                    }
-                    if (await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
-                        !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
-                    {
-                        await CaptureStateAsync(page);
-                        await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
-                        await page.ClickAsync(":text('Next')");
-                        await CaptureStateAsync(page);
-                        break;
-                    }
-                    await Task.Delay(100);
-                }
+                await HandleRecoveryPrompts(page);
 
                 await page.ClickAsync("#avatar-btn");
                 await page.ClickAsync(":text('Switch account')");
@@ -79,26 +61,7 @@ namespace StreamingTools.YouTube
 
                 await page.ClickAsync("#select-files-button");
 
-                string windowTitle = await page.GetTitleAsync();
-
-                var browserProcess = Process.GetProcesses()
-                    .Where(x => x.MainWindowTitle.Contains(windowTitle)).ToList();
-                await Task.Delay(2000);
-                foreach (var process in browserProcess)
-                {
-                    var callback = new User32.WNDENUMPROC((x, y) =>
-                    {
-                        if (process.MainWindowHandle == User32.GetParent(x) &&
-                            User32.GetWindowText(x) == "Open")
-                        {
-                            Keyboard.Type(filePath);
-                            Keyboard.Press(VirtualKeyShort.ENTER);
-                            return false;
-                        }
-                        return true;
-                    });
-                    User32.EnumWindows(callback, IntPtr.Zero);
-                }
+                await AddFileToOpenFileDialog(page, filePath);
 
                 var titleRequired = await page.WaitForSelectorAsync(":text('Title (required)')");
                 await Task.Delay(500);
@@ -155,6 +118,57 @@ namespace StreamingTools.YouTube
             {
                 await CaptureStateAsync(page);
                 throw;
+            }
+        }
+
+        private async Task AddFileToOpenFileDialog(IPage page, string filePath)
+        {
+            string windowTitle = await page.GetTitleAsync();
+
+            var browserProcess = Process.GetProcesses()
+                .Where(x => x.MainWindowTitle.Contains(windowTitle)).ToList();
+            await Task.Delay(2000);
+            foreach (var process in browserProcess)
+            {
+                var callback = new User32.WNDENUMPROC((x, y) =>
+                {
+                    if (process.MainWindowHandle == User32.GetParent(x) &&
+                        User32.GetWindowText(x) == "Open")
+                    {
+                        Keyboard.Type(filePath);
+                        Keyboard.Press(VirtualKeyShort.ENTER);
+                        return false;
+                    }
+                    return true;
+                });
+                User32.EnumWindows(callback, IntPtr.Zero);
+            }
+        }
+
+        private async Task HandleRecoveryPrompts(IPage page)
+        {
+            //Check for recovery prompts
+            bool clickedConfirm = false;
+            for (int i = 0; i < 300; i++)
+            {
+                if (await page.QuerySelectorAsync("#avatar-btn") is not null) break;
+
+                if (!clickedConfirm &&
+                    await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
+                {
+                    await confirmEmailLink.ClickAsync();
+                    clickedConfirm = true;
+                }
+                if (await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
+                    !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
+                {
+                    await CaptureStateAsync(page);
+                    await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
+                    await page.ClickAsync(":text('Next')");
+                    await CaptureStateAsync(page);
+                    break;
+                }
+                await Task.Delay(200);
             }
         }
 
