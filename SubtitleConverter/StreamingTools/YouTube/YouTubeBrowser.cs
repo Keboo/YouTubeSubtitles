@@ -76,9 +76,8 @@ namespace StreamingTools.YouTube
                 await page.ClickAsync("div.ytcp-button:has-text('Show more')");
                 await page.TypeAsync("input[aria-label=\"Tags\"]", string.Join(',', tags));
 
-                await page.ClickAsync("ytcp-text-dropdown-trigger[label=\"Recording date\"]");
+                await page.ClickAsync("#recorded-date");
                 await page.PressAsync("paper-input[aria-label=\"Enter date\"] >> input", "Control+a");
-
 
                 await page.TypeAsync("paper-input[aria-label=\"Enter date\"]", $"{recordingDate:MM/dd/yyyy}");
                 await page.PressAsync("paper-input[aria-label=\"Enter date\"] >> input", "Escape");
