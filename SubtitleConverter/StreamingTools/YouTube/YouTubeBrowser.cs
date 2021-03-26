@@ -77,11 +77,11 @@ namespace StreamingTools.YouTube
                 await page.TypeAsync("input[aria-label=\"Tags\"]", string.Join(',', tags));
 
                 await page.ClickAsync("#recorded-date");
-                await page.PressAsync("paper-input[aria-label=\"Enter date\"] >> input", "Control+a");
+                await page.PressAsync("paper-input[aria-label=\"Enter date\"] >> input", "Control+a", timeout:10_000);
 
                 await page.TypeAsync("paper-input[aria-label=\"Enter date\"]", $"{recordingDate:MM/dd/yyyy}");
-                await page.PressAsync("paper-input[aria-label=\"Enter date\"] >> input", "Escape");
-
+                await page.ClickAsync("#recorded-date", position: new System.Drawing.Point(-10, 10));
+                
                 await page.ClickAsync("#location >> input");
                 await page.TypeAsync("#location >> input", "Spokane WA");
                 await page.ClickAsync("paper-item:has-text('Spokane WA')");
