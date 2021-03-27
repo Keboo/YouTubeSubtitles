@@ -79,7 +79,7 @@ namespace StreamingTools.YouTube
                 await page.ClickAsync("#recorded-date");
 
                 const string dataInputSelector = "tp-yt-paper-input[aria-label=\"Enter date\"]";
-                await page.PressAsync($"{dataInputSelector} >> input", "Control+a", timeout:10_000);
+                await page.PressAsync($"{dataInputSelector} >> input", "Control+a", timeout: 10_000);
 
                 await page.TypeAsync(dataInputSelector, $"{recordingDate:MM/dd/yyyy}");
                 await page.PressAsync($"{dataInputSelector} >> input", "Escape");
@@ -88,21 +88,15 @@ namespace StreamingTools.YouTube
                 await page.TypeAsync("#location >> input", "Spokane WA");
                 await page.ClickAsync("paper-item:has-text('Spokane WA')");
 
-
-                while(await page.QuerySelectorAsync("#done-button") is var doneButton &&
-                      (doneButton is null || !await doneButton.IsEnabledAsync()))
+                while (await page.QuerySelectorAsync("#next-button") is { } nextButton &&
+                    await nextButton.IsVisibleAsync())
                 {
-                    if (await page.QuerySelectorAsync("#next-button") is { } nextButton)
-                    {
-                        await nextButton.ClickAsync();
-                    }
-                    if (await page.QuerySelectorAsync("paper-radio-button[name=\"PRIVATE\"]") is { } privateRadioButton)
-                    {
-                        await privateRadioButton.ClickAsync();
-                        break;
-                    }
+                    await nextButton.ClickAsync();
                 }
-                
+
+                //Make private
+                await page.ClickAsync("tp-yt-paper-radio-button[name=\"PRIVATE\"]");
+
                 await WaitFor(() => page.IsEnabledAsync("#done-button"));
                 //Wait for upload complete
                 await WaitFor(async () =>
