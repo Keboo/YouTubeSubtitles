@@ -88,14 +88,21 @@ namespace StreamingTools.YouTube
                 await page.TypeAsync("#location >> input", "Spokane WA");
                 await page.ClickAsync("paper-item:has-text('Spokane WA')");
 
-                await page.ClickAsync("#next-button");
 
-                //Set cards can't be done until after the video is done processing
-                await page.ClickAsync("#next-button");
-
-                //Make private
-                await page.ClickAsync("paper-radio-button[name=\"PRIVATE\"]");
-
+                while(await page.QuerySelectorAsync("#done-button") is var doneButton &&
+                      (doneButton is null || !await doneButton.IsEnabledAsync()))
+                {
+                    if (await page.QuerySelectorAsync("#next-button") is { } nextButton)
+                    {
+                        await nextButton.ClickAsync();
+                    }
+                    if (await page.QuerySelectorAsync("paper-radio-button[name=\"PRIVATE\"]") is { } privateRadioButton)
+                    {
+                        await privateRadioButton.ClickAsync();
+                        break;
+                    }
+                }
+                
                 await WaitFor(() => page.IsEnabledAsync("#done-button"));
                 //Wait for upload complete
                 await WaitFor(async () =>
@@ -121,6 +128,8 @@ namespace StreamingTools.YouTube
                 throw;
             }
         }
+
+
 
         private static async Task AddFileToOpenFileDialog(IPage page, string filePath)
         {
