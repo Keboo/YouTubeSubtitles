@@ -86,7 +86,7 @@ namespace StreamingTools.YouTube
 
                 await page.ClickAsync("#location >> input");
                 await page.TypeAsync("#location >> input", "Spokane WA");
-                await page.ClickAsync("paper-item:has-text('Spokane WA')");
+                await page.ClickAsync("tp-yt-paper-item:has-text('Spokane WA')");
 
                 while (await page.QuerySelectorAsync("#next-button") is { } nextButton &&
                     await nextButton.IsVisibleAsync())
