@@ -11,7 +11,7 @@ namespace StreamingTools
     {
         private static readonly Regex SilenceEndRegex = new(@"silence_end:\s*(?<EndTime>\d+\.?\d*)\s*\|");
 
-        public static async Task<string> TrimLeadingSilence(string filePath, TimeSpan? minSilence = null)
+        public static async Task<FileInfo?> TrimLeadingSilence(FileInfo filePath, TimeSpan? minSilence = null)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -31,7 +31,7 @@ namespace StreamingTools
                 ffmpegProcess.OutputDataReceived += FfmpegProcess_OutputDataReceived;
                 ffmpegProcess.ErrorDataReceived += FfmpegProcess_OutputDataReceived;
 
-                if (!ffmpegProcess.Start()) return "";
+                if (!ffmpegProcess.Start()) return null;
                 ffmpegProcess.BeginOutputReadLine();
                 ffmpegProcess.BeginErrorReadLine();
 
@@ -61,10 +61,10 @@ namespace StreamingTools
                 catch { }
             }
 
-            if (silenceEndTime is null) return "";
+            if (silenceEndTime is null) return null;
 
             double startSeekTime = silenceEndTime.Value - (minSilence ?? TimeSpan.FromSeconds(2)).TotalSeconds;
-            string outputPath = Path.Combine(Path.GetDirectoryName(filePath)!, Path.ChangeExtension(Path.GetFileNameWithoutExtension(filePath) + "_trimmed", Path.GetExtension(filePath)));
+            string outputPath = Path.Combine(filePath.DirectoryName!, Path.ChangeExtension(Path.GetFileNameWithoutExtension(filePath.Name) + "_trimmed", filePath.Extension));
             startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
@@ -75,7 +75,8 @@ namespace StreamingTools
             {
                 await ffmpegTrimProcess.WaitForExitAsync(CancellationToken.None);
             }
-            return outputPath;
+            File.Move(outputPath, filePath.FullName, true);
+            return new FileInfo(filePath.FullName);
         }
     }
 }

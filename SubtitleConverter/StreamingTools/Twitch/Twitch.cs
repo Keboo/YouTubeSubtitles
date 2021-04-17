@@ -19,19 +19,21 @@ namespace StreamingTools.Twitch
             HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         }
 
-        public async Task<string> DownloadVideoFileAsync(string videoId)
+        public async Task<FileInfo?> DownloadVideoFileAsync(string videoId)
         {
             VideoPlaybackAccessToken videoToken = await GetVideoPlaybackToken(HttpClient, videoId);
 
             string videoPlaylistUrl = await GetVideoPlaylistUrl(HttpClient, videoId, videoToken);
 
-            return await DownloadVideoFile(videoPlaylistUrl);
+            return await DownloadVideoFile(videoId, videoPlaylistUrl);
         }
 
-        private static async Task<string> DownloadVideoFile(string playlistUrl)
+        private static async Task<FileInfo?> DownloadVideoFile(string videoId, string playlistUrl)
         {
             //Assumes ffmpeg is defined on the path
-            string tempFile = Path.ChangeExtension(Path.GetTempFileName(), "mp4");
+            DirectoryInfo directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "VideoConverter"));
+            FileInfo tempFile = new(Path.Combine(directory.FullName, $"{videoId}.mp4"));
+            if (tempFile.Exists) return tempFile;
             var startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
@@ -42,7 +44,7 @@ namespace StreamingTools.Twitch
                 await ffmpegProcess.WaitForExitAsync(CancellationToken.None);
                 return tempFile;
             }
-            return "";
+            return null;
         }
 
         private static async Task<VideoPlaybackAccessToken> GetVideoPlaybackToken(HttpClient httpClient, string videoId)

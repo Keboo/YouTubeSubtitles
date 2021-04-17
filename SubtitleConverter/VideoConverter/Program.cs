@@ -68,14 +68,18 @@ namespace VideoConverter
                     console.Out.WriteLine($"Twitch video {video.Id} already has YouTube id '{row.YouTubeVideoId}'; skipping");
                     continue;
                 }
-                console.Out.WriteLine($"Downloading Twitch video {video.Id}");
-
-                string downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
+                console.Out.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
+                
+                FileInfo? downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
+                if (downloadedFilePath is null)
+                {
+                    console.Out.WriteLine($"Failed to download video file");
+                    return 1;
+                }
                 console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
 
-                string trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
-                await DeleteFile(downloadedFilePath);
-                if (string.IsNullOrWhiteSpace(trimmedFilePath))
+                FileInfo? trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
+                if (trimmedFilePath is null)
                 {
                     console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
                     return 1;
@@ -122,7 +126,7 @@ namespace VideoConverter
 
         private static async Task<string> UploadVideoAsync(
             BrowserCredential credential,
-            string videoPath,
+            FileInfo videoFile,
             TwitchVideo video)
         {
             string description = video.Description;
@@ -166,9 +170,23 @@ namespace VideoConverter
             {
                 tags.Add("terraform");
                 tags.Add("azure");
+                tags.Add("devops");
                 playlists.Add("Terraform");
                 playlists.Add("DevOps");
                 playlists.Add("Azure");
+            }
+            if (video.Title.Contains("DevOps"))
+            {
+                tags.Add("devops");
+                playlists.Add("DevOps");
+            }
+            if (video.Title.Contains("GitHub"))
+            {
+                tags.Add("github");
+            }
+            if (video.Title.Contains("Azure"))
+            {
+                tags.Add("azure");
             }
 
             description += Environment.NewLine + Environment.NewLine + $"Broadcasted live on Twitch -- Watch live at https://twitch.keboo.dev";
@@ -176,17 +194,17 @@ namespace VideoConverter
             DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
 
             YouTubeBrowser browser = new(credential.Username, credential.Password, credential.RecoveryEmail);
-            return await browser.UploadAsync(videoPath, video.Title, description, recordingDate, playlists, tags);
+            return await browser.UploadAsync(videoFile, video.Title, description, recordingDate, playlists, tags);
         }
 
-        private static async Task DeleteFile(string file)
+        private static async Task DeleteFile(FileInfo file)
         {
             Exception? lastException = null;
             for (int i = 0; i < 30; i++)
             {
                 try
                 {
-                    File.Delete(file);
+                    file.Delete();
                     return;
                 }
                 catch (Exception e)

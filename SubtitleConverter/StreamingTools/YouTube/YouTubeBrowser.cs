@@ -27,7 +27,7 @@ namespace StreamingTools.YouTube
         }
 
         public async Task<string> UploadAsync(
-            string filePath,
+            FileInfo file,
             string title,
             string description,
             DateTime recordingDate,
@@ -61,7 +61,7 @@ namespace StreamingTools.YouTube
 
                 await page.ClickAsync("#select-files-button");
 
-                await AddFileToOpenFileDialog(page, filePath);
+                await AddFileToOpenFileDialog(page, file);
 
                 var titleRequired = await page.WaitForSelectorAsync(":text('Title (required)')");
                 await Task.Delay(500);
@@ -125,7 +125,7 @@ namespace StreamingTools.YouTube
 
 
 
-        private static async Task AddFileToOpenFileDialog(IPage page, string filePath)
+        private static async Task AddFileToOpenFileDialog(IPage page, FileInfo file)
         {
             string windowTitle = await page.GetTitleAsync();
 
@@ -139,7 +139,7 @@ namespace StreamingTools.YouTube
                     if (process.MainWindowHandle == User32.GetParent(x) &&
                         User32.GetWindowText(x) == "Open")
                     {
-                        Keyboard.Type(filePath);
+                        Keyboard.Type(file.FullName);
                         Keyboard.Press(VirtualKeyShort.ENTER);
                         return false;
                     }
