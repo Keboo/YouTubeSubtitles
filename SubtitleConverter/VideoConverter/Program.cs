@@ -188,6 +188,10 @@ namespace VideoConverter
             {
                 tags.Add("azure");
             }
+            if (video.Title.Contains("WinUI"))
+            {
+                tags.Add("winui");
+            }
 
             description += Environment.NewLine + Environment.NewLine + $"Broadcasted live on Twitch -- Watch live at https://twitch.keboo.dev";
 
