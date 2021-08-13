@@ -172,6 +172,12 @@ namespace StreamingTools.YouTube
                     await CaptureStateAsync(page);
                     break;
                 }
+                if (await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone)
+                {
+                    await callPhone.ClickAsync();
+                    //Allow for some time to actually make the call
+                    await Task.Delay(TimeSpan.FromSeconds(30));
+                }
                 await Task.Delay(200);
             }
         }
