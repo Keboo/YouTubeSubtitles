@@ -204,7 +204,7 @@ namespace StreamingTools.YouTube
                     }
                     await CaptureStateAsync(page, "FoundPhoneEnd");
                 }
-                await Task.Delay(200);
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }
 
