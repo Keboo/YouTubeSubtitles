@@ -163,6 +163,12 @@ namespace StreamingTools.YouTube
                     break;
                 }
                 if (!emailVerified && !clickedConfirm &&
+                    await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
+                {
+                    await confirmEmailLink.ClickAsync();
+                    clickedConfirm = true;
+                }
+                if (!emailVerified && clickedConfirm &&
                     await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
                     !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
                 {
@@ -171,12 +177,6 @@ namespace StreamingTools.YouTube
                     await page.ClickAsync(":text('Next')");
                     await CaptureStateAsync(page, "ExitRecoveryEmail");
                     emailVerified = true;
-                }
-                if (emailVerified && !clickedConfirm &&
-                    await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
-                {
-                    await confirmEmailLink.ClickAsync();
-                    clickedConfirm = true;
                 }
                 if (emailVerified && clickedConfirm &&
                     await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone)
