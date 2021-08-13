@@ -158,7 +158,7 @@ namespace StreamingTools.YouTube
                 if (await page.QuerySelectorAsync("#avatar-btn") is { } avatarButton &&
                     await avatarButton.IsVisibleAsync())
                 {
-                    await CaptureStateAsync(page);
+                    await CaptureStateAsync(page, "DoneAccessibility");
                     break;
                 }
 
@@ -181,9 +181,11 @@ namespace StreamingTools.YouTube
                     await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone &&
                     await callPhone.IsVisibleAsync())
                 {
-                    await callPhone.ClickAsync();
+                    await CaptureStateAsync(page, "FoundPhoneStart");
+                    await callPhone.ClickAsync(delay:100);
                     //Allow for some time to actually make the call
                     await Task.Delay(TimeSpan.FromSeconds(30));
+                    await CaptureStateAsync(page, "FoundPhoneEnd");
                 }
                 await Task.Delay(200);
             }

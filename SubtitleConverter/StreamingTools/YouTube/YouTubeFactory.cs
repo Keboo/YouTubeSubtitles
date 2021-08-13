@@ -77,7 +77,7 @@ namespace StreamingTools.YouTube
             sw.Write(value);
             sw.Flush();
             stream.Position = 0;
-            return GoogleClientSecrets.Load(stream);
+            return await GoogleClientSecrets.FromStreamAsync(stream);
         }
     }
 }
