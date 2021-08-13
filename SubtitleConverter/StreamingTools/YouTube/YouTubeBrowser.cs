@@ -118,7 +118,7 @@ namespace StreamingTools.YouTube
             }
             catch (Exception)
             {
-                await CaptureStateAsync(page);
+                await CaptureStateAsync(page, "Exception");
                 throw;
             }
         }
@@ -162,7 +162,23 @@ namespace StreamingTools.YouTube
                     await CaptureStateAsync(page, "Done");
                     break;
                 }
-                if (emailVerified &&
+                if (!emailVerified && !clickedConfirm &&
+                    await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
+                    !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
+                {
+                    await CaptureStateAsync(page, "EnterRecoveryEmail");
+                    await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
+                    await page.ClickAsync(":text('Next')");
+                    await CaptureStateAsync(page, "ExitRecoveryEmail");
+                    emailVerified = true;
+                }
+                if (emailVerified && !clickedConfirm &&
+                    await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
+                {
+                    await confirmEmailLink.ClickAsync();
+                    clickedConfirm = true;
+                }
+                if (emailVerified && clickedConfirm &&
                     await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone)
                 {
                     await CaptureStateAsync(page, "FoundPhoneStart");
@@ -170,21 +186,6 @@ namespace StreamingTools.YouTube
                     //Allow for some time to actually make the call
                     await Task.Delay(TimeSpan.FromSeconds(30));
                     await CaptureStateAsync(page, "FoundPhoneEnd");
-                }
-                if (!clickedConfirm &&
-                    await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
-                {
-                    await confirmEmailLink.ClickAsync();
-                    clickedConfirm = true;
-                }
-                if (await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
-                    !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
-                {
-                    await CaptureStateAsync(page);
-                    await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
-                    await page.ClickAsync(":text('Next')");
-                    await CaptureStateAsync(page);
-                    emailVerified = true;
                 }
                 await Task.Delay(200);
             }
