@@ -28,7 +28,8 @@ namespace VideoConverter
             string? azureStorageAccountKey = null,
             string? youTubeUsername = null,
             string? youTubePassword = null,
-            string? youTubeRecoveryEmail = null)
+            string? youTubeRecoveryEmail = null,
+            string? youTubeTwoFactorCallbackUrl = null)
         {
             var configBuilder = new ConfigurationBuilder();
             configBuilder.AddEnvironmentVariables();
@@ -90,8 +91,9 @@ namespace VideoConverter
                 BrowserCredential creds = new(
                     youTubeUsername ?? youtubeSection["Username"],
                     youTubePassword ?? youtubeSection["Password"],
-                    youTubeRecoveryEmail ?? youtubeSection["RecoveryEmail"]);
-                string youTubeId = await UploadVideoAsync(creds, trimmedFilePath, video);
+                    youTubeRecoveryEmail ?? youtubeSection["RecoveryEmail"],
+                    youTubeTwoFactorCallbackUrl ?? youtubeSection["TwoFactorCallbackUrl"]);
+                string youTubeId = await UploadVideoAsync(creds, trimmedFilePath, video, httpClient);
                 await DeleteFile(trimmedFilePath);
 
                 if (string.IsNullOrWhiteSpace(youTubeId))
@@ -127,7 +129,8 @@ namespace VideoConverter
         private static async Task<string> UploadVideoAsync(
             BrowserCredential credential,
             FileInfo videoFile,
-            TwitchVideo video)
+            TwitchVideo video,
+            HttpClient httpClient)
         {
             string description = video.Description;
 
@@ -197,7 +200,7 @@ namespace VideoConverter
 
             DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
 
-            YouTubeBrowser browser = new(credential.Username, credential.Password, credential.RecoveryEmail);
+            YouTubeBrowser browser = new(credential.Username, credential.Password, credential.RecoveryEmail, credential.TwoFactorCallbackUrl, httpClient);
             return await browser.UploadAsync(videoFile, video.Title, description, recordingDate, playlists, tags);
         }
 

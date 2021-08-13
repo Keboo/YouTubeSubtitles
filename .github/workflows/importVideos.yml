@@ -31,6 +31,7 @@ jobs:
         --you-tube-username ${{ secrets.YOUTUBE_USERNAME }}
         --you-tube-password ${{ secrets.YOUTUBE_PASSWORD }}
         --you-tube-recovery-email ${{ secrets.YOUTUBE_RECOVERYEMAIL }}
+        --you-tube-two-factor-callback-url ${{ secrets.YOUTUBE_2FACTORCALLBACKURL }}
     - name: Upload State
       if: ${{ always() }}
       uses: actions/upload-artifact@v2

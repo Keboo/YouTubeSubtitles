@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using User32 = PInvoke.User32;
@@ -18,12 +19,16 @@ namespace StreamingTools.YouTube
         private string Username { get; }
         private string Password { get; }
         private string RecoveryEmail { get; }
+        private string TwoFactorCallbackUrl { get; }
+        private HttpClient HttpClient { get; }
 
-        public YouTubeBrowser(string username, string password, string recoveryEmail)
+        public YouTubeBrowser(string username, string password, string recoveryEmail, string twoFactorCallbackUrl, HttpClient httpClient)
         {
             Username = username ?? throw new ArgumentNullException(nameof(username));
             Password = password ?? throw new ArgumentNullException(nameof(password));
             RecoveryEmail = recoveryEmail ?? throw new ArgumentNullException(nameof(recoveryEmail));
+            TwoFactorCallbackUrl = twoFactorCallbackUrl ?? throw new ArgumentNullException(nameof(twoFactorCallbackUrl));
+            HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         }
 
         public async Task<string> UploadAsync(
@@ -123,8 +128,6 @@ namespace StreamingTools.YouTube
             }
         }
 
-
-
         private static async Task AddFileToOpenFileDialog(IPage page, FileInfo file)
         {
             string windowTitle = await page.GetTitleAsync();
@@ -182,9 +185,23 @@ namespace StreamingTools.YouTube
                     await page.QuerySelectorAsync(":text('Get a verification code at')") is { } textPhone)
                 {
                     await CaptureStateAsync(page, "FoundPhoneStart");
+                    string originalCode = await Get2FACodeAsync();
                     await textPhone.ClickAsync(delay:100);
                     //Allow for some time to actually make the call
-                    await Task.Delay(TimeSpan.FromSeconds(30));
+                    string? code = null;
+                    for(int attempt = 0; code is null || attempt < 15*60; attempt++)
+                    {
+                        code = await Get2FACodeAsync();
+                        if (string.Equals(code, originalCode))
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(1));
+                        }
+                    }
+                    if (code is not null)
+                    {
+                        await page.TypeAsync(":text('Enter the code')", code);
+                        await page.ClickAsync(":text('Next')");
+                    }
                     await CaptureStateAsync(page, "FoundPhoneEnd");
                 }
                 await Task.Delay(200);
@@ -200,6 +217,9 @@ namespace StreamingTools.YouTube
             await File.WriteAllTextAsync(Path.Combine(directory, $"{count}{identifier}.htm"), await page.GetContentAsync());
             await page.ScreenshotAsync(Path.Combine(directory, $"{count}{identifier}.png"));
         }
+
+        private async Task<string> Get2FACodeAsync()
+            => await HttpClient.GetStringAsync(TwoFactorCallbackUrl);
 
         private static async Task WaitFor(Func<Task<bool>> condition, TimeSpan? timeout = null)
         {
