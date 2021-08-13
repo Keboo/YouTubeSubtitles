@@ -155,7 +155,12 @@ namespace StreamingTools.YouTube
             bool clickedConfirm = false;
             for (int i = 0; i < 300; i++)
             {
-                if (await page.QuerySelectorAsync("#avatar-btn") is not null) break;
+                if (await page.QuerySelectorAsync("#avatar-btn") is { } avatarButton &&
+                    await avatarButton.IsVisibleAsync())
+                {
+                    await CaptureStateAsync(page);
+                    break;
+                }
 
                 if (!clickedConfirm &&
                     await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
