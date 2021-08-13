@@ -153,6 +153,7 @@ namespace StreamingTools.YouTube
         {
             //Check for recovery prompts
             bool clickedConfirm = false;
+            bool emailVerified = false;
             for (int i = 0; i < 300; i++)
             {
                 if (await page.QuerySelectorAsync("#avatar-btn") is { } avatarButton &&
@@ -161,7 +162,15 @@ namespace StreamingTools.YouTube
                     await CaptureStateAsync(page, "Done");
                     break;
                 }
-
+                if (emailVerified &&
+                    await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone)
+                {
+                    await CaptureStateAsync(page, "FoundPhoneStart");
+                    await callPhone.ClickAsync(delay:100);
+                    //Allow for some time to actually make the call
+                    await Task.Delay(TimeSpan.FromSeconds(30));
+                    await CaptureStateAsync(page, "FoundPhoneEnd");
+                }
                 if (!clickedConfirm &&
                     await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
                 {
@@ -175,15 +184,7 @@ namespace StreamingTools.YouTube
                     await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
                     await page.ClickAsync(":text('Next')");
                     await CaptureStateAsync(page);
-                }
-                if (await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone &&
-                    await callPhone.IsVisibleAsync())
-                {
-                    await CaptureStateAsync(page, "FoundPhoneStart");
-                    await callPhone.ClickAsync(delay:100);
-                    //Allow for some time to actually make the call
-                    await Task.Delay(TimeSpan.FromSeconds(30));
-                    await CaptureStateAsync(page, "FoundPhoneEnd");
+                    emailVerified = true;
                 }
                 await Task.Delay(200);
             }
