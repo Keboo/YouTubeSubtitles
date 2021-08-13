@@ -158,7 +158,7 @@ namespace StreamingTools.YouTube
                 if (await page.QuerySelectorAsync("#avatar-btn") is { } avatarButton &&
                     await avatarButton.IsVisibleAsync())
                 {
-                    await CaptureStateAsync(page, "DoneAccessibility");
+                    await CaptureStateAsync(page, "Done");
                     break;
                 }
 
@@ -175,10 +175,8 @@ namespace StreamingTools.YouTube
                     await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
                     await page.ClickAsync(":text('Next')");
                     await CaptureStateAsync(page);
-                    break;
                 }
-                if (!clickedConfirm &&
-                    await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone &&
+                if (await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone &&
                     await callPhone.IsVisibleAsync())
                 {
                     await CaptureStateAsync(page, "FoundPhoneStart");
