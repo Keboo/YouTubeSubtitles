@@ -159,50 +159,56 @@ namespace StreamingTools.YouTube
             bool emailVerified = false;
             for (int i = 0; i < 300; i++)
             {
-                if (await page.QuerySelectorAsync("#avatar-btn") is { } avatarButton &&
-                    await avatarButton.IsVisibleAsync())
+                try
                 {
-                    await CaptureStateAsync(page, "Done");
-                    break;
-                }
-                if (!emailVerified && !clickedConfirm &&
-                    await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
-                {
-                    await confirmEmailLink.ClickAsync();
-                    clickedConfirm = true;
-                }
-                if (!emailVerified && clickedConfirm &&
-                    await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
-                    !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
-                {
-                    await CaptureStateAsync(page, "EnterRecoveryEmail");
-                    await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
-                    await page.ClickAsync(":text('Next')");
-                    await CaptureStateAsync(page, "ExitRecoveryEmail");
-                    emailVerified = true;
-                }
-                if (emailVerified && clickedConfirm &&
-                    await page.QuerySelectorAsync(":text('Get a verification code at')") is { } textPhone)
-                {
-                    await CaptureStateAsync(page, "FoundPhoneStart");
-                    string originalCode = await Get2FACodeAsync();
-                    await textPhone.ClickAsync(delay:100);
-                    //Allow for some time to actually make the call
-                    string? code = null;
-                    for(int attempt = 0; code is null || attempt < 15*60; attempt++)
+                    if (await page.QuerySelectorAsync("#avatar-btn") is { } avatarButton)
                     {
-                        code = await Get2FACodeAsync();
-                        if (string.Equals(code, originalCode))
-                        {
-                            await Task.Delay(TimeSpan.FromSeconds(1));
-                        }
+                        await CaptureStateAsync(page, "Done");
+                        break;
                     }
-                    if (code is not null)
+                    if (!emailVerified && !clickedConfirm &&
+                        await page.QuerySelectorAsync(":text('Confirm your recovery email')") is { } confirmEmailLink)
                     {
-                        await page.TypeAsync(":text('Enter the code')", code);
+                        await confirmEmailLink.ClickAsync();
+                        clickedConfirm = true;
+                    }
+                    if (!emailVerified && clickedConfirm &&
+                        await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
+                        !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
+                    {
+                        await CaptureStateAsync(page, "EnterRecoveryEmail");
+                        await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
                         await page.ClickAsync(":text('Next')");
+                        await CaptureStateAsync(page, "ExitRecoveryEmail");
+                        emailVerified = true;
                     }
-                    await CaptureStateAsync(page, "FoundPhoneEnd");
+                    if (emailVerified && clickedConfirm &&
+                        await page.QuerySelectorAsync(":text('Get a verification code at')") is { } textPhone)
+                    {
+                        await CaptureStateAsync(page, "FoundPhoneStart");
+                        string originalCode = await Get2FACodeAsync();
+                        await textPhone.ClickAsync(delay: 100);
+                        //Allow for some time to actually make the call
+                        string? code = null;
+                        for (int attempt = 0; code is null || attempt < 15 * 60; attempt++)
+                        {
+                            code = await Get2FACodeAsync();
+                            if (string.Equals(code, originalCode))
+                            {
+                                await Task.Delay(TimeSpan.FromSeconds(1));
+                            }
+                        }
+                        if (code is not null)
+                        {
+                            await page.TypeAsync(":text('Enter the code')", code);
+                            await page.ClickAsync(":text('Next')");
+                        }
+                        await CaptureStateAsync(page, "FoundPhoneEnd");
+                    }
+                }
+                catch (Exception)
+                {
+                    await CaptureStateAsync(page, "RecoveryPromptsException");
                 }
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
