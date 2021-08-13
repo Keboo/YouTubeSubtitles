@@ -179,10 +179,10 @@ namespace StreamingTools.YouTube
                     emailVerified = true;
                 }
                 if (emailVerified && clickedConfirm &&
-                    await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone)
+                    await page.QuerySelectorAsync(":text('Get a verification code at')") is { } textPhone)
                 {
                     await CaptureStateAsync(page, "FoundPhoneStart");
-                    await callPhone.ClickAsync(delay:100);
+                    await textPhone.ClickAsync(delay:100);
                     //Allow for some time to actually make the call
                     await Task.Delay(TimeSpan.FromSeconds(30));
                     await CaptureStateAsync(page, "FoundPhoneEnd");
