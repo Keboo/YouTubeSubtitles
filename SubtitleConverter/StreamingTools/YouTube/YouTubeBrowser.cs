@@ -172,7 +172,9 @@ namespace StreamingTools.YouTube
                     await CaptureStateAsync(page);
                     break;
                 }
-                if (await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone)
+                if (!clickedConfirm &&
+                    await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone &&
+                    await callPhone.IsVisibleAsync())
                 {
                     await callPhone.ClickAsync();
                     //Allow for some time to actually make the call

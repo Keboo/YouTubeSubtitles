@@ -11,7 +11,7 @@
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="5.0.0" />
-    <PackageReference Include="PlaywrightSharp" Version="0.191.2" />
+    <PackageReference Include="PlaywrightSharp" Version="0.192.0" />
     <PackageReference Include="System.CommandLine.DragonFruit" Version="0.3.0-alpha.20574.7" />
   </ItemGroup>
 
