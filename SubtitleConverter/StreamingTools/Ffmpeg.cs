@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,9 +12,12 @@ namespace StreamingTools
 {
     public static class Ffmpeg
     {
+        private static readonly Regex SilenceStartRegex = new(@"silence_start:\s*(?<StartTime>\d+\.?\d*)");
         private static readonly Regex SilenceEndRegex = new(@"silence_end:\s*(?<EndTime>\d+\.?\d*)\s*\|");
 
-        public static async Task<FileInfo?> TrimLeadingSilence(FileInfo filePath, TimeSpan? minSilence = null)
+        public static async Task<FileInfo?> TrimLeadingSilence(FileInfo filePath, 
+            TimeSpan? minStartSilence = null,
+            TimeSpan? minEndSilence = null)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -21,13 +27,15 @@ namespace StreamingTools
                 RedirectStandardError = true,
                 UseShellExecute = false
             };
-            double? silenceEndTime = null;
+            List<(double StartTime, double EndTime)> silenceRegions = new();
+
             using (var ffmpegProcess = new Process
             {
                 StartInfo = startInfo,
                 EnableRaisingEvents = true,
             })
             {
+                double? lastStartTime = null;
                 ffmpegProcess.OutputDataReceived += FfmpegProcess_OutputDataReceived;
                 ffmpegProcess.ErrorDataReceived += FfmpegProcess_OutputDataReceived;
 
@@ -36,18 +44,25 @@ namespace StreamingTools
                 ffmpegProcess.BeginErrorReadLine();
 
                 await ffmpegProcess.WaitForExitAsync(CancellationToken.None);
+
                 void FfmpegProcess_OutputDataReceived(object sender, DataReceivedEventArgs e)
                 {
-                    if (e.Data?.ToString() is { } line &&
-                        SilenceEndRegex.Match(line) is { } match &&
-                        match.Success)
+                    if (e.Data?.ToString() is { } line)
                     {
-                        silenceEndTime = double.Parse(match.Groups["EndTime"].Value);
-                        try
+                        if (SilenceStartRegex.Match(line) is { } startMatch &&
+                            startMatch.Success && 
+                            double.TryParse(startMatch.Groups["StartTime"].Value, out double startTime))
                         {
-                            ffmpegProcess.Kill();
+                            lastStartTime = startTime;
                         }
-                        catch { }
+                        else if (SilenceEndRegex.Match(line) is { } endMatch &&
+                            endMatch.Success &&
+                            double.TryParse(endMatch.Groups["EndTime"].Value, out double endTime) &&
+                            lastStartTime is { } lastStart)
+                        {
+                            silenceRegions.Add((lastStart, endTime));
+                            lastStartTime = null;
+                        }
                     }
                 }
             }
@@ -61,14 +76,25 @@ namespace StreamingTools
                 catch { }
             }
 
-            if (silenceEndTime is null) return null;
+            if (silenceRegions.Count == 0) return null;
 
-            double startSeekTime = silenceEndTime.Value - (minSilence ?? TimeSpan.FromSeconds(2)).TotalSeconds;
+            double startSeekTime = silenceRegions[0].EndTime - (minStartSilence ?? TimeSpan.FromSeconds(2)).TotalSeconds;
+
+            StringBuilder argumentBuilder = new();
+            argumentBuilder.Append($"-ss \"{startSeekTime:N2}\" ");
+            if (silenceRegions.Count > 1)
+            {
+                double endSeekTime = silenceRegions.Last().StartTime + (minEndSilence ?? TimeSpan.FromSeconds(18)).TotalSeconds;
+                argumentBuilder.Append($"-to \"{endSeekTime}\" ");
+            }
+
             string outputPath = Path.Combine(filePath.DirectoryName!, Path.ChangeExtension(Path.GetFileNameWithoutExtension(filePath.Name) + "_trimmed", filePath.Extension));
+            argumentBuilder.Append($"-i \"{filePath}\" -c copy -loglevel error -y {outputPath}");
+
             startInfo = new ProcessStartInfo
             {
                 FileName = "ffmpeg",
-                Arguments = $"-ss \"{startSeekTime:N2}\" -i \"{filePath}\" -c copy -loglevel error -y {outputPath}"
+                Arguments = argumentBuilder.ToString()
             };
 
             if (Process.Start(startInfo) is { } ffmpegTrimProcess)
