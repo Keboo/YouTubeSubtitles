@@ -76,7 +76,7 @@ namespace StreamingTools
                 catch { }
             }
 
-            if (silenceRegions.Count == 0) return null;
+            if (silenceRegions.Count == 0) return filePath;
 
             double startSeekTime = silenceRegions[0].EndTime - (minStartSilence ?? TimeSpan.FromSeconds(2)).TotalSeconds;
 
