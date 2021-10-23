@@ -62,7 +62,7 @@ namespace StreamingTools.YouTube
                 await page.ClickAsync("#avatar-btn");
                 await page.ClickAsync(":text('Switch account')");
                 await page.ClickAsync(":text('Kevin Bost')");
-                await page.ClickAsync("ytcp-icon-button[aria-label=\"Upload videos\"]");
+                await page.ClickAsync("ytcp-icon-button[aria-label*=\"Upload videos\"]");
 
                 await page.ClickAsync("#select-files-button");
 
@@ -70,8 +70,8 @@ namespace StreamingTools.YouTube
 
                 var titleRequired = await page.WaitForSelectorAsync(":text('Title (required)')");
                 await Task.Delay(500);
-                await page.TypeAsync("#textbox[aria-label=\"Add a title that describes your video\"]", title);
-                await page.TypeAsync("#textbox[aria-label=\"Tell viewers about your video\"]", description);
+                await page.TypeAsync("#textbox[aria-label*=\"Add a title that describes your video\"]", title);
+                await page.TypeAsync("#textbox[aria-label*=\"Tell viewers about your video\"]", description);
                 await page.ClickAsync("span.ytcp-text-dropdown-trigger:has-text('Select')");
                 foreach (var playlist in playlists)
                 {
@@ -83,7 +83,7 @@ namespace StreamingTools.YouTube
 
                 await page.ClickAsync("#recorded-date");
 
-                const string dataInputSelector = "tp-yt-paper-input[aria-label=\"Enter date\"]";
+                const string dataInputSelector = "tp-yt-paper-input[aria-label*=\"Enter date\"]";
                 await page.PressAsync($"{dataInputSelector} >> input", "Control+a", timeout: 10_000);
 
                 await page.TypeAsync(dataInputSelector, $"{recordingDate:MM/dd/yyyy}");
