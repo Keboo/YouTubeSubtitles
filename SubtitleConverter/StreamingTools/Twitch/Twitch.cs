@@ -39,6 +39,9 @@ namespace StreamingTools.Twitch
                 FileName = "ffmpeg",
                 Arguments = $"-i {playlistUrl} -c copy -loglevel quiet -y \"{tempFile}\""
             };
+
+            Console.WriteLine($"Running {startInfo.FileName} {startInfo.Arguments}");
+            
             if (Process.Start(startInfo) is { } ffmpegProcess)
             {
                 await ffmpegProcess.WaitForExitAsync(CancellationToken.None);

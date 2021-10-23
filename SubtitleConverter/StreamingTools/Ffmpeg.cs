@@ -29,6 +29,8 @@ namespace StreamingTools
             };
             List<(double StartTime, double EndTime)> silenceRegions = new();
 
+            Console.WriteLine($"Running {startInfo.FileName} {startInfo.Arguments}");
+
             using (var ffmpegProcess = new Process
             {
                 StartInfo = startInfo,
@@ -96,6 +98,8 @@ namespace StreamingTools
                 FileName = "ffmpeg",
                 Arguments = argumentBuilder.ToString()
             };
+
+            Console.WriteLine($"Running {startInfo.FileName} {startInfo.Arguments}");
 
             if (Process.Start(startInfo) is { } ffmpegTrimProcess)
             {
