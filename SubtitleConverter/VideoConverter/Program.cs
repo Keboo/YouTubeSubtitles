@@ -70,7 +70,7 @@ namespace VideoConverter
                     continue;
                 }
                 console.Out.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
-                
+
                 FileInfo? downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
                 if (downloadedFilePath is null)
                 {
@@ -159,6 +159,7 @@ namespace VideoConverter
             {
                 description += Environment.NewLine + Environment.NewLine + "Material Design In XAML Project: https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit";
                 tags.Add("material design");
+                tags.Add("WPF");
                 playlists.Add("Material Design in Xaml");
             }
             if (video.Title.Contains("System.CommandLine"))
@@ -186,6 +187,19 @@ namespace VideoConverter
             if (video.Title.Contains("GitHub"))
             {
                 tags.Add("github");
+            }
+            if (video.Title.Contains("GitHub Actions"))
+            {
+                tags.Add("github action");
+            }
+            if (video.Title.Contains("K8s") || video.Title.Contains("Kubernetes"))
+            {
+                tags.Add("kubernetes");
+            }
+            if (video.Title.Contains("helm"))
+            {
+                tags.Add("helm");
+                tags.Add("kubernetes");
             }
             if (video.Title.Contains("Azure"))
             {
