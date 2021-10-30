@@ -79,7 +79,7 @@ namespace VideoConverter
                 }
                 console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
 
-                FileInfo? trimmedFilePath = await Ffmpeg.TrimLeadingSilence(downloadedFilePath);
+                FileInfo? trimmedFilePath = await Ffmpeg.TrimSilence(downloadedFilePath, log: x => console.Out.WriteLine(x));
                 if (trimmedFilePath is null)
                 {
                     console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");

@@ -15,9 +15,10 @@ namespace StreamingTools
         private static readonly Regex SilenceStartRegex = new(@"silence_start:\s*(?<StartTime>\d+\.?\d*)");
         private static readonly Regex SilenceEndRegex = new(@"silence_end:\s*(?<EndTime>\d+\.?\d*)\s*\|");
 
-        public static async Task<FileInfo?> TrimLeadingSilence(FileInfo filePath, 
+        public static async Task<FileInfo?> TrimSilence(FileInfo filePath,
             TimeSpan? minStartSilence = null,
-            TimeSpan? minEndSilence = null)
+            TimeSpan? minEndSilence = null,
+            Action<string>? log = null)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -29,7 +30,7 @@ namespace StreamingTools
             };
             List<(double StartTime, double EndTime)> silenceRegions = new();
 
-            Console.WriteLine($"Running {startInfo.FileName} {startInfo.Arguments}");
+            log?.Invoke($"Running {startInfo.FileName} {startInfo.Arguments}");
 
             using (var ffmpegProcess = new Process
             {
@@ -52,7 +53,7 @@ namespace StreamingTools
                     if (e.Data?.ToString() is { } line)
                     {
                         if (SilenceStartRegex.Match(line) is { } startMatch &&
-                            startMatch.Success && 
+                            startMatch.Success &&
                             double.TryParse(startMatch.Groups["StartTime"].Value, out double startTime))
                         {
                             lastStartTime = startTime;
@@ -69,7 +70,7 @@ namespace StreamingTools
                 }
             }
 
-            foreach(var process in Process.GetProcessesByName("ffmpeg"))
+            foreach (var process in Process.GetProcessesByName("ffmpeg"))
             {
                 try
                 {
@@ -78,12 +79,27 @@ namespace StreamingTools
                 catch { }
             }
 
-            if (silenceRegions.Count == 0) return filePath;
+            if (silenceRegions.Count == 0)
+            {
+                log?.Invoke("Did not find any silence");
+                return filePath;
+            }
+
+            //Merge silence that is within 1 second of each other
+            for (int i = 0; i < silenceRegions.Count - 1; i++)
+            {
+                if (silenceRegions[i + 1].StartTime - silenceRegions[i].EndTime <= 1.0)
+                {
+                    silenceRegions[i] = (silenceRegions[i].StartTime, silenceRegions[i + 1].EndTime);
+                    silenceRegions.RemoveAt(i + 1);
+                }
+            }
 
             double startSeekTime = silenceRegions[0].EndTime - (minStartSilence ?? TimeSpan.FromSeconds(2)).TotalSeconds;
 
             StringBuilder argumentBuilder = new();
             argumentBuilder.Append($"-ss \"{startSeekTime:N2}\" ");
+
             if (silenceRegions.Count > 1)
             {
                 double endSeekTime = silenceRegions.Last().StartTime + (minEndSilence ?? TimeSpan.FromSeconds(18)).TotalSeconds;
@@ -99,7 +115,7 @@ namespace StreamingTools
                 Arguments = argumentBuilder.ToString()
             };
 
-            Console.WriteLine($"Running {startInfo.FileName} {startInfo.Arguments}");
+            log?.Invoke($"Running {startInfo.FileName} {startInfo.Arguments}");
 
             if (Process.Start(startInfo) is { } ffmpegTrimProcess)
             {
