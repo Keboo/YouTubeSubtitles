@@ -85,13 +85,13 @@ namespace StreamingTools
                 return filePath;
             }
 
-            //Merge silence that is within 1 second of each other
             for (int i = 0; i < silenceRegions.Count - 1; i++)
             {
-                if (silenceRegions[i + 1].StartTime - silenceRegions[i].EndTime <= 1.0)
+                if (silenceRegions[i + 1].StartTime - silenceRegions[i].EndTime <= TimeSpan.FromMinutes(5).TotalSeconds)
                 {
                     silenceRegions[i] = (silenceRegions[i].StartTime, silenceRegions[i + 1].EndTime);
                     silenceRegions.RemoveAt(i + 1);
+                    i--;
                 }
             }
 

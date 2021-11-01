@@ -1,5 +1,6 @@
 using PlaywrightSharp;
-using System;
+using StreamingTools;
+using System.IO;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -25,6 +26,13 @@ namespace Tests
 
                 await Task.Delay(1000);
             }
+        }
+
+        [Fact]
+        public async Task CanTrimSilence()
+        {
+            FileInfo file = new(@"C:\Users\kitok\Downloads\test.mp4");
+            await Ffmpeg.TrimSilence(file);
         }
     }
 }
