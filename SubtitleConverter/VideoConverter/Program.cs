@@ -190,7 +190,7 @@ namespace VideoConverter
             }
             if (video.Title.Contains("GitHub Actions"))
             {
-                tags.Add("github action");
+                tags.Add("github actions");
             }
             if (video.Title.Contains("K8s") || video.Title.Contains("Kubernetes"))
             {
