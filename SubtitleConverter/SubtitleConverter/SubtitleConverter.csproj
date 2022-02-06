@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	<TargetFramework>net5.0-windows</TargetFramework>
-	<OutputType>Exe</OutputType>
-	<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UserSecretsId>f0641d01-fdcd-4149-8dc9-dcc00ccbd7fc</UserSecretsId>
   </PropertyGroup>
 
