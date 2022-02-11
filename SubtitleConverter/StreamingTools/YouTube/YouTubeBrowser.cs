@@ -197,6 +197,7 @@ namespace StreamingTools.YouTube
                             code = await Get2FACodeAsync();
                             if (string.Equals(code, originalCode))
                             {
+                                Console.WriteLine("  - 2FA not recieved... waiting....");
                                 await Task.Delay(TimeSpan.FromSeconds(1));
                             }
                         }
