@@ -184,7 +184,7 @@ namespace StreamingTools.YouTube
                         await CaptureStateAsync(page, "ExitRecoveryEmail");
                         emailVerified = true;
                     }
-                    if ((emailVerified ^ clickedConfirm) &&
+                    if (emailVerified == clickedConfirm &&
                         await page.QuerySelectorAsync(":text('Get a verification code at')") is { } textPhone)
                     {
                         await CaptureStateAsync(page, "FoundPhoneStart");
