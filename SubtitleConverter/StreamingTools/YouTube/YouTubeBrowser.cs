@@ -159,6 +159,7 @@ namespace StreamingTools.YouTube
             bool emailVerified = false;
             for (int i = 0; i < 300; i++)
             {
+                Console.WriteLine($"  - Attempt {i}, Confirmed? {clickedConfirm}, Email Verified? {emailVerified}");
                 try
                 {
                     if (await page.QuerySelectorAsync("#avatar-btn") is { } avatarButton)
@@ -176,13 +177,14 @@ namespace StreamingTools.YouTube
                         await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
                         !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
                     {
+                        Console.WriteLine($"  - Verifying email");
                         await CaptureStateAsync(page, "EnterRecoveryEmail");
                         await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
                         await page.ClickAsync(":text('Next')");
                         await CaptureStateAsync(page, "ExitRecoveryEmail");
                         emailVerified = true;
                     }
-                    if (emailVerified && clickedConfirm &&
+                    if ((emailVerified ^ clickedConfirm) &&
                         await page.QuerySelectorAsync(":text('Get a verification code at')") is { } textPhone)
                     {
                         await CaptureStateAsync(page, "FoundPhoneStart");
