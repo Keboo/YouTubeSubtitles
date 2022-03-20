@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using StreamingTools.Azure;
 using StreamingTools.YouTube;
 
-DateTime OLDEST_DATE = new DateTime(2020, 12, 17);
+DateTime OLDEST_DATE = new DateTime(2022, 1, 29);
 
 var configBuilder = new ConfigurationBuilder();
 configBuilder.AddEnvironmentVariables();
@@ -45,21 +45,23 @@ do
     {
         if (item.Snippet.PublishedAt <= OLDEST_DATE)
         {
-            Console.WriteLine($"Found item {item.Snippet.Title} published on {item.Snippet.PublishedAt}, ending");
+            Console.WriteLine($"Found item {item.Snippet.Title} published on {item.Snippet.PublishedAt:d}, ending");
             return;
         }
         var videoDetails = youtubeService.Videos.List(new[] { "statistics", "snippet" });
         videoDetails.Id = item.Id.VideoId;
         var videoDetailsResponse = await videoDetails.ExecuteAsync();
 
-        Console.WriteLine($"Saving {item.Snippet.Title} ({item.Snippet.PublishedAt})");
-
+        Console.WriteLine($"Saving {item.Snippet.Title} ({item.Snippet.PublishedAt:d})");
+        await writer.WriteLineAsync($"Activity: Video/Webcast/Podcast");
+        await writer.WriteLineAsync($"Primary Area: ");
+        await writer.WriteLineAsync($"Secondary Area: ");
         await writer.WriteLineAsync($"Title: {item.Snippet.Title}");
-        await writer.WriteLineAsync($"Date: {item.Snippet.PublishedAt}");
+        await writer.WriteLineAsync($"Date: {item.Snippet.PublishedAt:d}");
         await writer.WriteLineAsync($"Url: https://youtu.be/{item.Id.VideoId}");
         await writer.WriteLineAsync($"Description: {item.Snippet.Description}");
         await writer.WriteLineAsync($"Views: {videoDetailsResponse.Items[0].Statistics.ViewCount ?? 0}");
-        await writer.WriteLineAsync($"Tags: {string.Join(",", videoDetailsResponse.Items[0].Snippet.Tags ?? Array.Empty<string>())}");
+        //await writer.WriteLineAsync($"Tags: {string.Join(",", videoDetailsResponse.Items[0].Snippet.Tags ?? Array.Empty<string>())}");
         await writer.WriteLineAsync("----");
     }
     await writer.FlushAsync();
