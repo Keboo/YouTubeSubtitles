@@ -1,17 +1,16 @@
 using Microsoft.Azure.Cosmos.Table;
 using System;
 
-namespace StreamingTools.Azure
+namespace StreamingTools.Azure;
+
+public class VideoRow : TableEntity
 {
-    public class VideoRow : TableEntity
+    public string TwitchVideoId
     {
-        public string TwitchVideoId
-        {
-            get => RowKey;
-            set => RowKey = value;
-        }
-        public DateTime TwitchPublishedAt { get; set; }
-        public string? YouTubeVideoId { get; set; }
-        public string? SubtitlesUrl { get; set; }
+        get => RowKey;
+        set => RowKey = value;
     }
+    public DateTime TwitchPublishedAt { get; set; }
+    public string? YouTubeVideoId { get; set; }
+    public string? SubtitlesUrl { get; set; }
 }

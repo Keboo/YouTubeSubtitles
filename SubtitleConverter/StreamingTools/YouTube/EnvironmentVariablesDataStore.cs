@@ -4,63 +4,62 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace StreamingTools.YouTube
+namespace StreamingTools.YouTube;
+
+public class EnvironmentVariablesDataStore : IDataStore
 {
-    public class EnvironmentVariablesDataStore : IDataStore
+    private string Prefix { get; }
+
+    public EnvironmentVariablesDataStore(string prefix)
     {
-        private string Prefix { get; }
+        Prefix = prefix;
+    }
 
-        public EnvironmentVariablesDataStore(string prefix)
+    public Task ClearAsync()
+    {
+        foreach (string variable in Environment.GetEnvironmentVariables().Keys
+            .Cast<string>()
+            .Where(x => x.StartsWith(Prefix)))
         {
-            Prefix = prefix;
+            Environment.SetEnvironmentVariable(variable, "");
         }
+        return Task.CompletedTask;
+    }
 
-        public Task ClearAsync()
+    public Task DeleteAsync<T>(string key)
+    {
+        Environment.SetEnvironmentVariable(Prefix + key, "");
+        return Task.CompletedTask;
+    }
+
+    public Task<T?> GetAsync<T>(string key)
+    {
+        TaskCompletionSource<T?> taskCompletionSource = new TaskCompletionSource<T?>();
+        try
         {
-            foreach (string variable in Environment.GetEnvironmentVariables().Keys
-                .Cast<string>()
-                .Where(x => x.StartsWith(Prefix)))
+            string? value = GetValue(key);
+            if (string.IsNullOrEmpty(value))
             {
-                Environment.SetEnvironmentVariable(variable, "");
+                taskCompletionSource.SetResult(default);
             }
-            return Task.CompletedTask;
-        }
-
-        public Task DeleteAsync<T>(string key)
-        {
-            Environment.SetEnvironmentVariable(Prefix + key, "");
-            return Task.CompletedTask;
-        }
-
-        public Task<T?> GetAsync<T>(string key)
-        {
-            TaskCompletionSource<T?> taskCompletionSource = new TaskCompletionSource<T?>();
-            try
+            else
             {
-                string? value = GetValue(key);
-                if (string.IsNullOrEmpty(value))
-                {
-                    taskCompletionSource.SetResult(default);
-                }
-                else
-                {
-                    taskCompletionSource.SetResult(NewtonsoftJsonSerializer.Instance.Deserialize<T?>(value));
-                }
+                taskCompletionSource.SetResult(NewtonsoftJsonSerializer.Instance.Deserialize<T?>(value));
             }
-            catch (Exception exception)
-            {
-                taskCompletionSource.SetException(exception);
-            }
-            return taskCompletionSource.Task;
         }
-
-        public string? GetValue(string key) => Environment.GetEnvironmentVariable(Prefix + key);
-
-        public Task StoreAsync<T>(string key, T value)
+        catch (Exception exception)
         {
-            string contents = NewtonsoftJsonSerializer.Instance.Serialize(value);
-            Environment.SetEnvironmentVariable(Prefix + key, contents);
-            return Task.CompletedTask;
+            taskCompletionSource.SetException(exception);
         }
+        return taskCompletionSource.Task;
+    }
+
+    public string? GetValue(string key) => Environment.GetEnvironmentVariable(Prefix + key);
+
+    public Task StoreAsync<T>(string key, T value)
+    {
+        string contents = NewtonsoftJsonSerializer.Instance.Serialize(value);
+        Environment.SetEnvironmentVariable(Prefix + key, contents);
+        return Task.CompletedTask;
     }
 }
