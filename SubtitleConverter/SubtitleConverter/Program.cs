@@ -2,6 +2,7 @@
 using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Configuration;
 using StreamingTools.Azure;
+using StreamingTools.Subtitle;
 using StreamingTools.YouTube;
 using System.CommandLine;
 using System.CommandLine.IO;
@@ -17,6 +18,7 @@ class Program
     /// <param name="azureStorageAccountKey"></param>
     /// <param name="youTubeClientId"></param>
     /// <param name="youTubeClientSecret"></param>
+    /// <param name="youTubeVideoId"></param>
     /// <param name="console"></param>
     /// <returns></returns>
     static async Task Main(
@@ -24,6 +26,7 @@ class Program
         string? azureStorageAccountKey = null,
         string? youTubeClientId = null,
         string? youTubeClientSecret = null,
+        string? youTubeVideoId = null,
         IConsole? console = null)
     {
         if (console is null) throw new ArgumentNullException(nameof(console));
@@ -35,7 +38,7 @@ class Program
 
         CloudStorageAccount storageAccount = StorageAccount.Get(azureStorageAccountKey, config);
         var tableClient = storageAccount.CreateCloudTableClient();
-        var streamVideoTables = tableClient.GetTableReference("streamvideos");
+        var streamVideoTable = tableClient.GetTableReference("streamvideos");
         var youtubeSettingsTable = tableClient.GetTableReference("youtubesettings");
 
         YouTubeService youTubeService = await YouTubeFactory.GetServiceAsync(
@@ -45,65 +48,100 @@ class Program
             youTubeClientSecret,
             YouTubeService.Scope.YoutubeForceSsl);
 
-        foreach (VideoRow row in streamVideoTables.CreateQuery<VideoRow>()
-                    .Where(x => x.YouTubeVideoId != "" && x.YouTubeVideoId != "Unknown"))
+        CancellationToken token = CancellationToken.None;
+        if (string.IsNullOrWhiteSpace(youTubeVideoId))
         {
-            if (!string.IsNullOrWhiteSpace(row.SubtitlesUrl)) continue;
-            console.Out.WriteLine($"Converting markdown for YouTube video '{row.YouTubeVideoId}'");
-            if (await youTubeService.GetSubtitles(row.YouTubeVideoId!, CancellationToken.None) is { } subtitles)
+            foreach (VideoRow row in streamVideoTable.CreateQuery<VideoRow>()
+                        .Where(x => x.YouTubeVideoId != "" && x.YouTubeVideoId != "Unknown"))
             {
-                if (!string.IsNullOrWhiteSpace(subtitles))
-                {
-                    console.Out.WriteLine("  Got subtitles");
-                    string markdown = ConvertToMarkdown(row.YouTubeVideoId!, subtitles);
-                    string fileName = await WriteToFile(outputDirectory, markdown, row.YouTubeVideoId!, row.TwitchPublishedAt);
-                    console.Out.WriteLine($"  Wrote markdown to '{fileName}'");
+                if (!string.IsNullOrWhiteSpace(row.SubtitlesUrl)) continue;
+                console.Out.WriteLine($"Converting markdown for YouTube video '{row.YouTubeVideoId}'");
 
-                    row.SubtitlesUrl = $"https://github.com/Keboo/YouTubeSubtitles/blob/master/Subtitles/{fileName}";
-                }
-                else
+                await ProcessRow(youTubeService, row, outputDirectory, streamVideoTable, console, token);
+            }
+        }
+        else
+        {
+            VideoRow? row = streamVideoTable.CreateQuery<VideoRow>()
+                        .Where(x => x.YouTubeVideoId == youTubeVideoId)
+                        .FirstOrDefault();
+            if (row is null)
+            {
+                console.Error.WriteLine($"Failed to find video with id {youTubeVideoId}");
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(row.SubtitlesUrl))
                 {
-                    console.Out.WriteLine($"  YouTube video '{row.YouTubeVideoId}' not found");
-
-                    row.SubtitlesUrl = "YouTube Video Removed";
+                    console.Out.WriteLine($"Overwriting existing subtitle file {row.SubtitlesUrl}");
                 }
-                TableOperation insertOperation = TableOperation.Merge(row);
-                TableResult _ = await streamVideoTables.ExecuteAsync(insertOperation);
-                console.Out.WriteLine($"  Updated table storage url with '{row.SubtitlesUrl}'");
+
+                console.Out.WriteLine($"Converting markdown for YouTube video '{row.YouTubeVideoId}'");
+                await ProcessRow(youTubeService, row, outputDirectory, streamVideoTable, console, token);
             }
         }
     }
 
-    private static string ConvertToMarkdown(string videoId, string srtCaptions)
+    private static async Task ProcessRow(
+        YouTubeService youTubeService, 
+        VideoRow row, 
+        string outputDirectory,
+        CloudTable streamVideoTable,
+        IConsole console,
+        CancellationToken token)
     {
-        string videoUrl = $"https://youtu.be/{videoId}";
-        srtCaptions = Regex.Replace(srtCaptions, @"^(\d+)\s*$", "", RegexOptions.Multiline);
-        srtCaptions = Regex.Replace(srtCaptions, @"(?<=^)((\d+):(\d+):(\d+)[\d:,]* --> [\d:,]+)\s*\r?\n([^\r\n]+)", $"[$5]({videoUrl}?t=$2h$3m$4s)\r\n", RegexOptions.Multiline);
-        srtCaptions = Regex.Replace(srtCaptions, @"\n+", "\n\n", RegexOptions.Multiline);
-        srtCaptions = $"[YouTube Video]({videoUrl})\r\n\r\n" + srtCaptions;
-        return srtCaptions;
+        if (await youTubeService.GetSrtSubtitles(row.YouTubeVideoId!, token) is { } subtitles)
+        {
+            if (!string.IsNullOrWhiteSpace(subtitles))
+            {
+                console.Out.WriteLine("  Got subtitles");
+                string markdown = Subtitles.ConvertSrtToMarkdown(row.YouTubeVideoId!, subtitles);
+                string fileName = await WriteToFile(outputDirectory, markdown, row.YouTubeVideoId!, row.TwitchPublishedAt);
+                console.Out.WriteLine($"  Wrote markdown to '{fileName}'");
+
+                row.SubtitlesUrl = (await Subtitles.GetMarkdownUrl(row, token))?.AbsoluteUri;
+
+                if (row.SubtitlesUrl is { } subtitlesUrl)
+                {
+                    string snippet = "snippet";
+                    var videoQuery = youTubeService.Videos.List(snippet);
+                    videoQuery.Id = row.YouTubeVideoId;
+                    var videoResponse = await videoQuery.ExecuteAsync();
+                    if (videoResponse.Items is { Count: > 0 } videos &&
+                        videos[0] is { } video &&
+                        video.Snippet?.Description is { } description &&
+                        description.Contains(subtitlesUrl) != true)
+                    {
+                        console.Out.WriteLine($"Updating video {video.Id} description");
+                        description +=
+                            Environment.NewLine +
+                            Environment.NewLine +
+                            $"Search video contents here: {subtitlesUrl}";
+
+                        video.Snippet.Description = description;
+                        await youTubeService.Videos.Update(video, snippet).ExecuteAsync();
+                    }
+                }
+            }
+            else
+            {
+                console.Out.WriteLine($"  YouTube video '{row.YouTubeVideoId}' not found");
+
+                row.SubtitlesUrl = "YouTube Video Removed";
+            }
+            TableOperation insertOperation = TableOperation.Merge(row);
+            TableResult _ = await streamVideoTable.ExecuteAsync(insertOperation);
+            console.Out.WriteLine($"  Updated table storage url with '{row.SubtitlesUrl}'");
+        }
     }
 
     private static async Task<string> WriteToFile(string outputDirectory, string markdownContent, string videoId, DateTime date)
     {
-        string fileName = SanitizeFileName($"{date:yyyy-MM-dd}-{videoId}") + ".md";
+        string fileName = Subtitles.GetMarkdownFileName(videoId, date);
         var path = Path.Combine(Path.GetFullPath(outputDirectory), fileName);
 
         await File.WriteAllTextAsync(path, markdownContent);
 
         return fileName;
-
-        static string SanitizeFileName(string fileName)
-        {
-            foreach (var invalidChar in Path.GetInvalidFileNameChars())
-            {
-                fileName = fileName.Replace(invalidChar.ToString(), "");
-            }
-            return fileName;
-        }
-    }
-
-    private record Video(string Id, string? Prefix, string Subtitles)
-    {
     }
 }

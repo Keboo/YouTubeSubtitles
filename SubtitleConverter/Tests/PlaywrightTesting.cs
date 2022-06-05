@@ -1,6 +1,5 @@
 using PlaywrightSharp;
 using StreamingTools;
-using Xunit;
 
 namespace Tests;
 

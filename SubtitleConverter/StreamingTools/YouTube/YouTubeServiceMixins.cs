@@ -5,7 +5,7 @@ namespace StreamingTools.YouTube;
 
 public static class YouTubeServiceMixins
 {
-    public static async Task<string?> GetSubtitles(this YouTubeService service, string videoId, CancellationToken token)
+    public static async Task<string?> GetSrtSubtitles(this YouTubeService service, string videoId, CancellationToken token)
     {
         var captionRequest = service.Captions.List("id", videoId);
         try
