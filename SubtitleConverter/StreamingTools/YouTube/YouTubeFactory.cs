@@ -3,10 +3,6 @@ using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace StreamingTools.YouTube;
 
@@ -18,10 +14,10 @@ public static class YouTubeFactory
     }
 
     public static async Task<YouTubeService> GetServiceAsync(
-        IDataStore dataStore, 
+        IDataStore dataStore,
         IConfiguration config,
-        string? clientId, 
-        string? clientSecret, 
+        string? clientId,
+        string? clientSecret,
         params string[] scopes)
     {
         var section = config.GetSection("YouTube");
@@ -36,12 +32,12 @@ public static class YouTubeFactory
         using var cts = new CancellationTokenSource();
 
         GoogleClientSecrets secrets = await GetClientSecrets(dataStore, clientId, clientSecret);
-        
+
         if (secrets?.Secrets == null)
         {
             throw new InvalidOperationException("Could not find client secrets");
         }
-        
+
         var credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                 secrets.Secrets,
                 scopes,

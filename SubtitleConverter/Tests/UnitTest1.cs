@@ -1,7 +1,5 @@
 using PlaywrightSharp;
 using StreamingTools;
-using System.IO;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Tests;
@@ -22,7 +20,7 @@ public class PlaywrightTesting
         if (await page.QuerySelectorAsync(":text('Call your phone on file')") is { } callPhone &&
             await callPhone.IsVisibleAsync())
         {
-            await callPhone.ClickAsync(delay:100, force:true);
+            await callPhone.ClickAsync(delay: 100, force: true);
 
             await Task.Delay(1000);
         }

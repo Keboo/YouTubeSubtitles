@@ -1,9 +1,6 @@
 ﻿using Google.Apis.Util.Store;
 using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Azure.Documents.Linq;
-using System;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace StreamingTools.Azure;
 

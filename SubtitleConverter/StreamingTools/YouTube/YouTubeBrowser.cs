@@ -1,14 +1,6 @@
 ﻿using FlaUI.Core.Input;
 using FlaUI.Core.WindowsAPI;
 using PlaywrightSharp;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using User32 = PInvoke.User32;
 
 namespace StreamingTools.YouTube;

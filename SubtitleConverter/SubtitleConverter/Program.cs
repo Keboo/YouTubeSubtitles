@@ -3,14 +3,8 @@ using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Configuration;
 using StreamingTools.Azure;
 using StreamingTools.YouTube;
-using System;
 using System.CommandLine;
 using System.CommandLine.IO;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace SubtitleConverter;
 

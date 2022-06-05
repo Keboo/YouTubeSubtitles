@@ -1,19 +1,11 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.Net.Http;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace StreamingTools.Twitch;
+﻿namespace StreamingTools.Twitch;
 
 public class Twitch
 {
     private const string TwitchClientId = "kimne78kx3ncx6brgo4mv6wki5h1ko";
 
     private HttpClient HttpClient { get; }
-    
+
     public Twitch(HttpClient httpClient)
     {
         HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
@@ -41,7 +33,7 @@ public class Twitch
         };
 
         Console.WriteLine($"Running {startInfo.FileName} {startInfo.Arguments}");
-        
+
         if (Process.Start(startInfo) is { } ffmpegProcess)
         {
             await ffmpegProcess.WaitForExitAsync(CancellationToken.None);

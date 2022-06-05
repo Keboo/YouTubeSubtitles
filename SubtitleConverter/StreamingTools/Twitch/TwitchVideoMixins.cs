@@ -1,5 +1,4 @@
-﻿using System;
-
+﻿
 using TwitchVideo = TwitchLib.Api.Helix.Models.Videos.GetVideos.Video;
 
 namespace StreamingTools.Twitch;

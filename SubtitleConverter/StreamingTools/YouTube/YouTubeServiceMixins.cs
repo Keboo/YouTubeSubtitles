@@ -1,8 +1,5 @@
 ﻿using Google;
 using Google.Apis.YouTube.v3;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace StreamingTools.YouTube;
 

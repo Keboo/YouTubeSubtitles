@@ -1,6 +1,5 @@
 ﻿using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Configuration;
-using System;
 
 namespace StreamingTools.Azure;
 
