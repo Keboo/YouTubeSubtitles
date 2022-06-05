@@ -23,7 +23,7 @@ public static class Ffmpeg
         var startInfo = new ProcessStartInfo
         {
             FileName = "ffmpeg",
-            Arguments = $"-i \"{filePath}\" -af silencedetect=n=0.001 -f null -",
+            Arguments = $"-i \"{filePath}\" -af silencedetect=n=-55dB -f null -",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
@@ -87,7 +87,7 @@ public static class Ffmpeg
 
         for (int i = 0; i < silenceRegions.Count - 1; i++)
         {
-            if (silenceRegions[i + 1].StartTime - silenceRegions[i].EndTime <= TimeSpan.FromMinutes(5).TotalSeconds)
+            if (silenceRegions[i + 1].StartTime - silenceRegions[i].EndTime <= TimeSpan.FromMinutes(1).TotalSeconds)
             {
                 silenceRegions[i] = (silenceRegions[i].StartTime, silenceRegions[i + 1].EndTime);
                 silenceRegions.RemoveAt(i + 1);

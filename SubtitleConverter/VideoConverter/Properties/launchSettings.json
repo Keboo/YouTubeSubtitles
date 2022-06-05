@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "VideoConverter": {
+      "commandName": "Project",
+      "commandLineArgs": "--twitch-video-id 1310180508"
+    }
+  }
+}

@@ -25,6 +25,7 @@ class Program
         string? twitchUserId = null,
         string? twitchClientId = null,
         string? twitchClientSecret = null,
+        string? twitchVideoId = null,
         string? azureStorageAccountKey = null,
         string? youTubeUsername = null,
         string? youTubePassword = null,
@@ -40,6 +41,7 @@ class Program
         twitchUserId ??= section["TwitchUserId"] ?? throw new InvalidOperationException("No Twitch user id specified");
         twitchClientId ??= section["TwitchClientId"] ?? throw new InvalidOperationException("No Twitch client id specified");
         twitchClientSecret ??= section["TwitchClientSecret"] ?? throw new InvalidOperationException("No Twitch client secret specified");
+        azureStorageAccountKey ??= section["AzureStorageAccountKey"] ?? throw new InvalidOperationException("No Azure Storage Account key");
 
         var storageAccount = StorageAccount.Get(azureStorageAccountKey, config);
         var tableClient = storageAccount.CreateCloudTableClient();
@@ -64,9 +66,17 @@ class Program
             VideoRow? row = streamVideoTables.CreateQuery<VideoRow>()
                 .Where(x => x.TwitchVideoId == video.Id)
                 .FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(row?.YouTubeVideoId))
+            if (string.IsNullOrEmpty(twitchVideoId))
             {
-                console.Out.WriteLine($"Twitch video {video.Id} already has YouTube id '{row.YouTubeVideoId}'; skipping");
+                if (!string.IsNullOrWhiteSpace(row?.YouTubeVideoId))
+                {
+                    console.Out.WriteLine($"Twitch video {video.Id} already has YouTube id '{row.YouTubeVideoId}'; skipping");
+                    continue;
+                }
+            }
+            else if (video.Id != twitchVideoId)
+            {
+                console.Out.WriteLine($"Twitch video {video.Id} does not match target id of '{twitchVideoId}'; skipping");
                 continue;
             }
             console.Out.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
@@ -119,7 +129,7 @@ class Program
             TableOperation insertOperation = TableOperation.InsertOrMerge(row);
 
             // Execute the operation.
-            TableResult _ = await streamVideoTables.ExecuteAsync(insertOperation);
+            _ = await streamVideoTables.ExecuteAsync(insertOperation);
 
             break;
         }
