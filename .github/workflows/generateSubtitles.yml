@@ -31,7 +31,7 @@ jobs:
         --azure-storage-account-key '${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}'
         --you-tube-client-id '${{ secrets.YOUTUBE_CLIENT_ID }}'
         --you-tube-client-secret '${{ secrets.YOUTUBE_CLIENT_SECRET }}'
-        --you-tube-video-id '${{ inputs.video-id }}'
+        --you-tube-video-id '${{ github.event.inputs.video-id }}'
     - name: Commit & Push changes
       uses: actions-js/push@master
       with:
