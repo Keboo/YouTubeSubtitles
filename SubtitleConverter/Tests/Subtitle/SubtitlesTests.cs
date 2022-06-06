@@ -8,7 +8,7 @@ public class SubtitlesTests
     [Fact]
     public async Task GetMarkdownUrl_WithValidRow_GetFullyQualifiedUrl()
     {
-        VideoRow row = new()
+        VideoRow row = new(new())
         {
             YouTubeVideoId = "nck3AW8R6eA",
             TwitchPublishedAt = new DateTime(2022, 4, 22)

@@ -85,10 +85,8 @@ class Program
         twitchClientSecret ??= section["TwitchClientSecret"] ?? throw new InvalidOperationException("No Twitch client secret specified");
         azureStorageAccountKey ??= section["AzureStorageAccountKey"] ?? throw new InvalidOperationException("No Azure Storage Account key");
 
-        var storageAccount = StorageAccount.Get(azureStorageAccountKey, config);
-        var tableClient = storageAccount.CreateCloudTableClient();
-        var streamVideoTables = tableClient.GetTableReference("streamvideos");
-        var youtubeSettingsTable = tableClient.GetTableReference("youtubesettings");
+        var streamVideosClient = StorageAccount.Get(azureStorageAccountKey, "streamvideos", config);
+        var youtubeSettingClient = StorageAccount.Get(azureStorageAccountKey, "youtubesettings", config);
 
         TwitchAPI api = new(settings: new ApiSettings()
         {
@@ -105,7 +103,7 @@ class Program
         foreach (TwitchVideo video in videoResponse.Videos)
         {
             // Check if video exists in storage
-            VideoRow? row = streamVideoTables.CreateQuery<VideoRow>()
+            VideoRow? row = streamVideosClient.CreateQuery<VideoRow>()
                 .Where(x => x.TwitchVideoId == video.Id)
                 .FirstOrDefault();
             if (string.IsNullOrEmpty(twitchVideoId))
