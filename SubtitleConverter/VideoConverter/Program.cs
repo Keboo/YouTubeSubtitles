@@ -14,17 +14,65 @@ namespace VideoConverter;
 
 class Program
 {
-    public static async Task<int> Main(
+    static Task Main(string[] args)
+    {
+        Option<string> twitchUserId = Option("--twitch-user-id");
+        Option<string> twitchClientId = Option("--twitch-client-id");
+        Option<string> twitchClientSecret = Option("--twitch-client-secret");
+        Option<string?> twitchVideoId = new("--twitch-video-id")
+        {
+            Arity = ArgumentArity.ZeroOrOne
+        };
+        Option<string> storageAccountKey = Option("--azure-storage-account-key");
+        Option<string> youTubeUsername = Option("--you-tube-username");
+        Option<string> youTubePassword = Option("--you-tube-password");
+        Option<string> youTubeRecoveryEmail = Option("--you-tube-recovery-email");
+        Option<string> youTubeTwoFactorCallbackUrl = Option("--you-tube-two-factor-callback-url");
+
+        RootCommand rootCommand = new()
+        {
+            twitchUserId,
+            twitchClientId,
+            twitchClientSecret,
+            twitchVideoId,
+            storageAccountKey,
+            youTubeUsername,
+            youTubePassword,
+            youTubeRecoveryEmail,
+            youTubeTwoFactorCallbackUrl
+        };
+        rootCommand.SetHandler(ctx => MainInvoke(
+            ctx.Console,
+            ctx.ParseResult.GetValueForOption(twitchUserId),
+            ctx.ParseResult.GetValueForOption(twitchClientId),
+            ctx.ParseResult.GetValueForOption(twitchClientSecret),
+            ctx.ParseResult.GetValueForOption(twitchVideoId),
+            ctx.ParseResult.GetValueForOption(storageAccountKey),
+            ctx.ParseResult.GetValueForOption(youTubeUsername),
+            ctx.ParseResult.GetValueForOption(youTubePassword),
+            ctx.ParseResult.GetValueForOption(youTubeRecoveryEmail),
+            ctx.ParseResult.GetValueForOption(youTubeTwoFactorCallbackUrl)
+        ));
+        return rootCommand.InvokeAsync(args);
+
+        static Option<string> Option(string alias)
+            => new(alias)
+            {
+                Arity = ArgumentArity.ZeroOrOne
+            };
+    }
+
+    public static async Task<int> MainInvoke(
         IConsole console,
-        string? twitchUserId = null,
-        string? twitchClientId = null,
-        string? twitchClientSecret = null,
-        string? twitchVideoId = null,
-        string? azureStorageAccountKey = null,
-        string? youTubeUsername = null,
-        string? youTubePassword = null,
-        string? youTubeRecoveryEmail = null,
-        string? youTubeTwoFactorCallbackUrl = null)
+        string? twitchUserId,
+        string? twitchClientId,
+        string? twitchClientSecret,
+        string? twitchVideoId,
+        string? azureStorageAccountKey,
+        string? youTubeUsername,
+        string? youTubePassword,
+        string? youTubeRecoveryEmail,
+        string? youTubeTwoFactorCallbackUrl)
     {
         var configBuilder = new ConfigurationBuilder();
         configBuilder.AddEnvironmentVariables();
