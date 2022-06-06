@@ -21,8 +21,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - run: $text = '${{ secrets.TWITCH_CLIENT_ID }}'.ToCharArray(); [Array]::Reverse($text); -join $text
-    - run: $text = '${{ secrets.TWITCH_CLIENT_SECRET }}'.ToCharArray(); [Array]::Reverse($text); -join $text
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
