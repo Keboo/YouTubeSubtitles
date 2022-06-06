@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "SubtitleConverter": {
+      "commandName": "Project",
+      "commandLineArgs": "--you-tube-video-id "
+    }
+  }
+}

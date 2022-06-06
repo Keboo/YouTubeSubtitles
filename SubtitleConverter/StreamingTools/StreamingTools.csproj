@@ -2,18 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0-windows</TargetFramework>
-	<RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="FlaUI.Core" Version="3.2.0" />
     <PackageReference Include="Google.Apis.YouTube.v3" Version="1.54.0.2378" />
-	<PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
-	<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="5.0.0" />
-	<PackageReference Include="PInvoke.User32" Version="0.7.104" />
-	<PackageReference Include="PlaywrightSharp" Version="0.192.0" />
-	<PackageReference Include="Polly" Version="7.2.2" />
-	<PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
-	<PackageReference Include="TwitchLib" Version="3.2.0" />
+    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="5.0.0" />
+    <PackageReference Include="PInvoke.User32" Version="0.7.104" />
+    <PackageReference Include="PlaywrightSharp" Version="0.192.0" />
+    <PackageReference Include="Polly" Version="7.2.2" />
+    <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
+    <PackageReference Include="TwitchLib" Version="3.2.0" />
   </ItemGroup>
 </Project>

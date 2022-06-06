@@ -11,6 +11,48 @@ namespace SubtitleConverter;
 
 class Program
 {
+    static Task Main(string[] args)
+    {
+        Option<string> outputDirectory = new("--output-directory", () => ".");
+        Option<string> storageAccountKey = new("--azure-storage-account-key")
+        {
+            IsRequired = true,
+            Arity = ArgumentArity.ExactlyOne
+        };
+        Option<string?> youTubeClientId = new("--you-tube-client-id")
+        {
+            IsRequired = true,
+            Arity = ArgumentArity.ExactlyOne
+        };
+        Option<string?> youTubeClientSecret = new("--you-tube-client-secret")
+        {
+            IsRequired = true,
+            Arity = ArgumentArity.ExactlyOne
+        };
+        Option<string?> youTubeVideoId = new("--you-tube-video-id")
+        {
+            Arity = ArgumentArity.ZeroOrOne
+        };
+
+        RootCommand rootCommand = new()
+        {
+            outputDirectory,
+            storageAccountKey,
+            youTubeClientId,
+            youTubeClientSecret,
+            youTubeVideoId
+        };
+        rootCommand.SetHandler(ctx => MainInvoke(
+            ctx.ParseResult.GetValueForOption(outputDirectory)!,
+            ctx.ParseResult.GetValueForOption(storageAccountKey)!,
+            ctx.ParseResult.GetValueForOption(youTubeClientId)!,
+            ctx.ParseResult.GetValueForOption(youTubeClientSecret)!,
+            ctx.ParseResult.GetValueForOption(youTubeVideoId),
+            ctx.Console
+        ));
+        return rootCommand.InvokeAsync(args);
+    }
+
     /// <summary>
     /// Convert subtitles to markdown
     /// </summary>
@@ -21,16 +63,14 @@ class Program
     /// <param name="youTubeVideoId"></param>
     /// <param name="console"></param>
     /// <returns></returns>
-    static async Task Main(
-        string outputDirectory = ".",
-        string? azureStorageAccountKey = null,
-        string? youTubeClientId = null,
-        string? youTubeClientSecret = null,
-        string? youTubeVideoId = null,
-        IConsole? console = null)
+    static async Task MainInvoke(
+        string outputDirectory,
+        string azureStorageAccountKey,
+        string youTubeClientId,
+        string youTubeClientSecret,
+        string? youTubeVideoId,
+        IConsole console)
     {
-        if (console is null) throw new ArgumentNullException(nameof(console));
-
         var configBuilder = new ConfigurationBuilder();
         configBuilder.AddEnvironmentVariables();
         configBuilder.AddUserSecrets(typeof(Program).Assembly);
