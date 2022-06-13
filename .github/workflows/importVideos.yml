@@ -32,7 +32,7 @@ jobs:
         --twitch-user-id '${{ secrets.TWITCH_USER_ID }}'
         --twitch-client-id '${{ secrets.TWITCH_CLIENT_ID }}'
         --twitch-client-secret '${{ secrets.TWITCH_CLIENT_SECRET }}'
-        --twtich-video-id '${{ inputs.video-id }}'
+        --twitch-video-id '${{ inputs.video-id }}'
         --azure-storage-account-key '${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}'
         --you-tube-username '${{ secrets.YOUTUBE_USERNAME }}'
         --you-tube-password '${{ secrets.YOUTUBE_PASSWORD }}'
