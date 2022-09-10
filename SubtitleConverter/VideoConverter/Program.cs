@@ -157,13 +157,10 @@ class Program
 
 
             DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
-            if (row is null)
-            {
-                row = new VideoRow
+            row ??= new VideoRow
                 {
                     PartitionKey = recordingDate.Year.ToString(),
                 };
-            }
 
             row.TwitchVideoId = video.Id;
             row.TwitchPublishedAt = recordingDate;

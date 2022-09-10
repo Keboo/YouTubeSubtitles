@@ -149,6 +149,9 @@ public class YouTubeBrowser
         //Check for recovery prompts
         bool clickedConfirm = false;
         bool emailVerified = false;
+        
+        string previousCode = await Get2FACodeAsync();
+
         for (int i = 0; i < 300; i++)
         {
             Console.WriteLine($"  - Attempt {i}, Confirmed? {clickedConfirm}, Email Verified? {emailVerified}");
@@ -180,19 +183,8 @@ public class YouTubeBrowser
                     await page.QuerySelectorAsync(":text('Get a verification code at')") is { } textPhone)
                 {
                     await CaptureStateAsync(page, "FoundPhoneStart");
-                    string originalCode = await Get2FACodeAsync();
                     await textPhone.ClickAsync(delay: 100);
-                    //Allow for some time to actually make the call
-                    string? code = null;
-                    for (int attempt = 0; code is null || attempt < 15 * 60; attempt++)
-                    {
-                        code = await Get2FACodeAsync();
-                        if (string.Equals(code, originalCode))
-                        {
-                            Console.WriteLine("  - 2FA not recieved... waiting....");
-                            await Task.Delay(TimeSpan.FromSeconds(1));
-                        }
-                    }
+                    string? code = await Get2FACode();
                     if (code is not null)
                     {
                         await page.TypeAsync(":text('Enter the code')", code);
@@ -200,12 +192,41 @@ public class YouTubeBrowser
                     }
                     await CaptureStateAsync(page, "FoundPhoneEnd");
                 }
+                if (await page.QuerySelectorAsync(":text('A text message with a 6-digit verification code was just sent to')") is not null)
+                {
+                    await CaptureStateAsync(page, "Auto2FAStart");
+                    
+                    string? code = await Get2FACode();
+                    if (code is not null)
+                    {
+                        await page.TypeAsync(":text('Enter the code')", code);
+                        await page.ClickAsync(":text('Next')");
+                    }
+                    await CaptureStateAsync(page, "Auto2FAEnd");
+                    
+                }
             }
             catch (Exception)
             {
                 await CaptureStateAsync(page, "RecoveryPromptsException");
             }
             await Task.Delay(TimeSpan.FromSeconds(1));
+
+            async Task<string?> Get2FACode()
+            {
+                string? code = null;
+                //Allow for some time to actually make the call
+                for (int attempt = 0; code is null || attempt < 15 * 60; attempt++)
+                {
+                    code = await Get2FACodeAsync();
+                    if (string.Equals(code, previousCode))
+                    {
+                        Console.WriteLine("  - 2FA not recieved... waiting....");
+                        await Task.Delay(TimeSpan.FromSeconds(1));
+                    }
+                }
+                return code;
+            }
         }
     }
 
