@@ -214,8 +214,9 @@ public class YouTubeBrowser
 
             async Task<string?> Get2FACode()
             {
+                Console.WriteLine("  - Waiting for 2FA code");
                 string? code = null;
-                //Allow for some time to actually make the call
+                //Allow for some time (15 min) to actually make the call
                 for (int attempt = 0; code is null || attempt < 15 * 60; attempt++)
                 {
                     code = await Get2FACodeAsync();
@@ -223,8 +224,11 @@ public class YouTubeBrowser
                     {
                         Console.WriteLine("  - 2FA not recieved... waiting....");
                         await Task.Delay(TimeSpan.FromSeconds(1));
+                        continue;
                     }
+                    break;
                 }
+                Console.WriteLine(code is not null ? "  - Got 2FA code" : "  - 2FA code not recieved");
                 return code;
             }
         }
