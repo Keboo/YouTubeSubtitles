@@ -40,6 +40,7 @@ public class YouTubeBrowser
         {
             await page.GoToAsync("https://studio.youtube.com/");
 
+            Console.WriteLine("Performing login");
             await page.TypeAsync("input[type=\"email\"]", Username);
             await page.ClickAsync(":text('Next')");
             await page.WaitForSelectorAsync("input[type=\"password\"]");
@@ -54,11 +55,16 @@ public class YouTubeBrowser
             await page.ClickAsync("#avatar-btn");
             await page.ClickAsync(":text('Switch account')");
             await page.ClickAsync(":text('Kevin Bost')");
-            await page.ClickAsync("ytcp-icon-button[aria-label*=\"Upload videos\"]");
+            Console.WriteLine("Switched account");
 
+            await page.ClickAsync("ytcp-icon-button[aria-label*=\"Upload videos\"]");
+            
             await page.ClickAsync("#select-files-button");
 
             await AddFileToOpenFileDialog(page, file);
+
+            //Set video details
+            Console.WriteLine("Setting video details");
 
             var titleRequired = await page.WaitForSelectorAsync(":text('Title (required)')");
             await Task.Delay(500);
@@ -85,17 +91,40 @@ public class YouTubeBrowser
             await page.TypeAsync("#location >> input", "Spokane WA");
             await page.ClickAsync("tp-yt-paper-item:has-text('Spokane WA')");
 
+            await Task.Delay(500);
+            await page.ClickAsync("#next-button");
+            
+
+            //Set Monetization On
+            Console.WriteLine("Setting Monetization");
+            await page.ClickAsync("ytcp-video-monetization");
+            await page.ClickAsync("tp-yt-paper-radio-button:has-text('On')");
+            await page.ClickAsync("#save-button");
+            await Task.Delay(500);
+            await page.ClickAsync("#next-button");
+
+            //Set self-assigned rating
+            Console.WriteLine("Setting self-assigned rating");
+
+            await page.ClickAsync("ytcp-checkbox-lit:has-text('None of the above')");
+            await page.ClickAsync("ytcp-button:has-text('Submit rating')");
+            await Task.Delay(500);
+
             while (await page.QuerySelectorAsync("#next-button") is { } nextButton &&
                 await nextButton.IsVisibleAsync())
             {
                 await nextButton.ClickAsync();
             }
-
+            
             //Make private
+            Console.WriteLine("Make private");
             await page.ClickAsync("tp-yt-paper-radio-button[name=\"PRIVATE\"]");
 
+
+            Console.WriteLine("Waiting for done button");
             await WaitFor(() => page.IsEnabledAsync("#done-button"));
-            //Wait for upload complete
+            
+            Console.WriteLine("Waiting for upload to complete");
             await WaitFor(async () =>
             {
                 string statusText = await page.GetInnerTextAsync("span.ytcp-video-upload-progress");
@@ -103,6 +132,7 @@ public class YouTubeBrowser
             }, TimeSpan.FromHours(2));
 
             string youtubeLink = await page.GetInnerTextAsync("span.ytcp-video-info");
+            Console.WriteLine($"Got YouTube link {youtubeLink}");
 
             await page.ClickAsync("#done-button");
 
