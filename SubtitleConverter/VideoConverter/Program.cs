@@ -41,18 +41,29 @@ class Program
             youTubeRecoveryEmail,
             youTubeTwoFactorCallbackUrl
         };
-        rootCommand.SetHandler(ctx => MainInvoke(
-            ctx.Console,
-            ctx.ParseResult.GetValueForOption(twitchUserId),
-            ctx.ParseResult.GetValueForOption(twitchClientId),
-            ctx.ParseResult.GetValueForOption(twitchClientSecret),
-            ctx.ParseResult.GetValueForOption(twitchVideoId),
-            ctx.ParseResult.GetValueForOption(storageAccountKey),
-            ctx.ParseResult.GetValueForOption(youTubeUsername),
-            ctx.ParseResult.GetValueForOption(youTubePassword),
-            ctx.ParseResult.GetValueForOption(youTubeRecoveryEmail),
-            ctx.ParseResult.GetValueForOption(youTubeTwoFactorCallbackUrl)
-        ));
+        rootCommand.SetHandler(async ctx =>
+        {
+            try
+            {
+                ctx.ExitCode = await MainInvoke(
+                        ctx.Console,
+                        ctx.ParseResult.GetValueForOption(twitchUserId),
+                        ctx.ParseResult.GetValueForOption(twitchClientId),
+                        ctx.ParseResult.GetValueForOption(twitchClientSecret),
+                        ctx.ParseResult.GetValueForOption(twitchVideoId),
+                        ctx.ParseResult.GetValueForOption(storageAccountKey),
+                        ctx.ParseResult.GetValueForOption(youTubeUsername),
+                        ctx.ParseResult.GetValueForOption(youTubePassword),
+                        ctx.ParseResult.GetValueForOption(youTubeRecoveryEmail),
+                        ctx.ParseResult.GetValueForOption(youTubeTwoFactorCallbackUrl)
+                    );
+            }
+            catch (Exception)
+            {
+                ctx.ExitCode = 1;
+                throw;
+            }
+        });
         return rootCommand.InvokeAsync(args);
 
         static Option<string> Option(string alias)
@@ -100,7 +111,7 @@ class Program
         var twitchClinet = new Twitch(httpClient);
 
         console.Out.WriteLine("Retrieving videos from twitch");
-        var videoResponse = await api.Helix.Videos.GetVideoAsync(userId: twitchUserId);
+        var videoResponse = await api.Helix.Videos.GetVideosAsync(userId: twitchUserId);
 
         foreach (TwitchVideo video in videoResponse.Videos)
         {
@@ -126,7 +137,7 @@ class Program
             FileInfo? downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
             if (downloadedFilePath is null)
             {
-                console.Out.WriteLine($"Failed to download video file");
+                console.Error.WriteLine($"Failed to download video file");
                 return 1;
             }
             console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
@@ -158,9 +169,9 @@ class Program
 
             DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
             row ??= new VideoRow
-                {
-                    PartitionKey = recordingDate.Year.ToString(),
-                };
+            {
+                PartitionKey = recordingDate.Year.ToString(),
+            };
 
             row.TwitchVideoId = video.Id;
             row.TwitchPublishedAt = recordingDate;
