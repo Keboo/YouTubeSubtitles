@@ -252,6 +252,7 @@ public class YouTubeBrowser
                     code = await Get2FACodeAsync();
                     if (string.Equals(code, previousCode))
                     {
+                        code = null;
                         Console.WriteLine("  - 2FA not recieved... waiting....");
                         await Task.Delay(TimeSpan.FromSeconds(1));
                         continue;
