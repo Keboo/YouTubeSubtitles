@@ -1,4 +1,4 @@
-﻿using FlaUI.Core.Input;
+using FlaUI.Core.Input;
 using FlaUI.Core.WindowsAPI;
 using PlaywrightSharp;
 using User32 = PInvoke.User32;
@@ -58,83 +58,80 @@ public class YouTubeBrowser
             Console.WriteLine("Switched account");
 
             await page.ClickAsync("ytcp-icon-button[aria-label*=\"Upload videos\"]");
-            
+
             await page.ClickAsync("#select-files-button");
 
             await AddFileToOpenFileDialog(page, file);
 
             //Set video details
             Console.WriteLine("Setting video details");
-
+            
             var titleRequired = await page.WaitForSelectorAsync(":text('Title (required)')");
             await Task.Delay(500);
-            await page.TypeAsync("#textbox[aria-label*=\"Add a title that describes your video\"]", title);
-            await page.TypeAsync("#textbox[aria-label*=\"Tell viewers about your video\"]", description);
-            await page.ClickAsync("span.ytcp-text-dropdown-trigger:has-text('Select')");
+            await page.TypeAsync("#dialog #textbox[aria-label*=\"Add a title that describes your video\"]", title);
+            await page.TypeAsync("#dialog #textbox[aria-label*=\"Tell viewers about your video\"]", description);
+            await page.ClickAsync("#dialog span.ytcp-text-dropdown-trigger:has-text('Select')");
             foreach (var playlist in playlists)
             {
-                await page.ClickAsync($"ytcp-ve li.ytcp-checkbox-group:has-text('{playlist}')");
+                await page.ClickAsync($"#dialog ytcp-ve li.ytcp-checkbox-group:has-text('{playlist}')");
             }
-            await page.ClickAsync("ytcp-button.done-button[label=\"Done\"]");
-            await page.ClickAsync("div.ytcp-button:has-text('Show more')");
-            await page.TypeAsync("input[aria-label=\"Tags\"]", string.Join(',', tags));
+            await page.ClickAsync("#dialog ytcp-button.done-button[label=\"Done\"]");
+            await page.ClickAsync("#dialog div.ytcp-button:has-text('Show more')");
+            await page.TypeAsync("#dialog input[aria-label=\"Tags\"]", string.Join(',', tags));
 
-            await page.ClickAsync("#recorded-date");
+            await page.ClickAsync("#dialog #recorded-date");
 
-            const string dataInputSelector = "tp-yt-paper-input[aria-label*=\"Enter date\"]";
+            const string dataInputSelector = "#dialog tp-yt-paper-input[aria-label*=\"Enter date\"]";
             await page.PressAsync($"{dataInputSelector} >> input", "Control+a", timeout: 10_000);
 
             await page.TypeAsync(dataInputSelector, $"{recordingDate:MM/dd/yyyy}");
             await page.PressAsync($"{dataInputSelector} >> input", "Escape");
 
-            await page.ClickAsync("#location >> input");
-            await page.TypeAsync("#location >> input", "Spokane WA");
-            await page.ClickAsync("tp-yt-paper-item:has-text('Spokane WA')");
+            await page.ClickAsync("#dialog #location >> input");
+            await page.TypeAsync("#dialog #location >> input", "Spokane WA");
+            await page.ClickAsync("#dialog tp-yt-paper-item:has-text('Spokane WA')");
 
-            await Task.Delay(500);
-            await page.ClickAsync("#next-button");
-            
+            await Task.Delay(1_000);
+
+            await ClickNextButton(page);
 
             //Set Monetization On
             Console.WriteLine("Setting Monetization");
-            await page.ClickAsync("ytcp-video-monetization");
-            await page.ClickAsync("tp-yt-paper-radio-button:has-text('On')");
-            await page.ClickAsync("#save-button");
+            await page.ClickAsync("#dialog ytcp-video-monetization");
+            await page.ClickAsync("#dialog tp-yt-paper-radio-button:has-text('On')");
+            await page.ClickAsync("#dialog #save-button");
             await Task.Delay(500);
-            await page.ClickAsync("#next-button");
+
+            await ClickNextButton(page);
 
             //Set self-assigned rating
             Console.WriteLine("Setting self-assigned rating");
 
-            await page.ClickAsync("ytcp-checkbox-lit:has-text('None of the above')");
-            await page.ClickAsync("ytcp-button:has-text('Submit rating')");
+            await page.ClickAsync("#dialog ytcp-checkbox-lit:has-text('None of the above')");
+            await page.ClickAsync("#dialog ytcp-button:has-text('Submit rating')");
             await Task.Delay(500);
-
-            while (await page.QuerySelectorAsync("#next-button") is { } nextButton &&
-                await nextButton.IsVisibleAsync())
-            {
-                await nextButton.ClickAsync();
-            }
             
+            await ClickNextButton(page);
+
             //Make private
             Console.WriteLine("Make private");
-            await page.ClickAsync("tp-yt-paper-radio-button[name=\"PRIVATE\"]");
+            await page.ClickAsync("#dialog tp-yt-paper-radio-button[name=\"PRIVATE\"]");
 
 
             Console.WriteLine("Waiting for done button");
-            await WaitFor(() => page.IsEnabledAsync("#done-button"));
-            
+            await WaitFor(() => page.IsEnabledAsync("#dialog #done-button"));
+
             Console.WriteLine("Waiting for upload to complete");
             await WaitFor(async () =>
             {
-                string statusText = await page.GetInnerTextAsync("span.ytcp-video-upload-progress");
+                string statusText = await page.GetInnerTextAsync("#dialog span.ytcp-video-upload-progress");
                 return !statusText.Contains("Uploading");
             }, TimeSpan.FromHours(2));
 
-            string youtubeLink = await page.GetInnerTextAsync("span.ytcp-video-info");
+            string youtubeLink = await page.GetInnerTextAsync("#dialog span.ytcp-video-info");
             Console.WriteLine($"Got YouTube link {youtubeLink}");
 
-            await page.ClickAsync("#done-button");
+            await page.ClickAsync("#dialog #done-button");
 
             if (!string.IsNullOrWhiteSpace(youtubeLink) && Uri.TryCreate(youtubeLink, UriKind.Absolute, out Uri? url))
             {
@@ -148,6 +145,34 @@ public class YouTubeBrowser
             await CaptureStateAsync(page, "Exception");
             throw;
         }
+    }
+
+    private static Task ClickNextButton(IPage page)
+        => ClickFirstAsync(page, "#dialog #next-button", "#dialog :text('Next')");
+
+    private static async Task ClickFirstAsync(IPage page, params string[] selectors)
+    {
+        foreach (var selector in selectors)
+        {
+            IElementHandle? element = await page.QuerySelectorAsync(selector);
+            if (await TryWaitFor(async () =>
+            {
+                element ??= await page.QuerySelectorAsync(selector);
+                return await element.IsVisibleAsync() && await element.IsEnabledAsync();
+            }))
+            {
+                try
+                {
+                    await element.ClickAsync();
+                    return;
+                }
+                catch (PlaywrightSharpException)
+                { }
+                catch (TimeoutException)
+                { }
+            }
+        }
+        throw new Exception($"Failed to click on any of the selectors {string.Join(", ", selectors)}");
     }
 
     private static async Task AddFileToOpenFileDialog(IPage page, FileInfo file)
@@ -179,7 +204,7 @@ public class YouTubeBrowser
         //Check for recovery prompts
         bool clickedConfirm = false;
         bool emailVerified = false;
-        
+
         string previousCode = await Get2FACodeAsync();
 
         for (int i = 0; i < 300; i++)
@@ -225,7 +250,7 @@ public class YouTubeBrowser
                 if (await page.QuerySelectorAsync(":text('A text message with a 6-digit verification code was just sent to')") is not null)
                 {
                     await CaptureStateAsync(page, "Auto2FAStart");
-                    
+
                     string? code = await Get2FACode();
                     if (code is not null)
                     {
@@ -233,7 +258,7 @@ public class YouTubeBrowser
                         await page.ClickAsync(":text('Next')");
                     }
                     await CaptureStateAsync(page, "Auto2FAEnd");
-                    
+
                 }
             }
             catch (Exception)
@@ -278,13 +303,21 @@ public class YouTubeBrowser
     private async Task<string> Get2FACodeAsync()
         => await HttpClient.GetStringAsync(TwoFactorCallbackUrl);
 
-    private static async Task WaitFor(Func<Task<bool>> condition, TimeSpan? timeout = null)
+    private static async Task<bool> TryWaitFor(Func<Task<bool>> condition, TimeSpan? timeout = null)
     {
         timeout ??= TimeSpan.FromSeconds(30);
         var sw = Stopwatch.StartNew();
         bool state;
         while (!(state = await condition()) && sw.Elapsed < timeout)
         { }
-        if (!state) throw new Exception("Failed timeout while waiting for condition");
+        return state;
+    }
+
+    private static async Task WaitFor(Func<Task<bool>> condition, TimeSpan? timeout = null)
+    {
+        if (!(await TryWaitFor(condition, timeout)))
+        {
+            throw new TimeoutException("Failed timeout while waiting for condition");
+        }
     }
 }
