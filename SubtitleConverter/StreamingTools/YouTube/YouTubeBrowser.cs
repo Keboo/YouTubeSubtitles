@@ -110,10 +110,15 @@ public class YouTubeBrowser
             await page.ClickAsync("#dialog ytcp-checkbox-lit:has-text('None of the above')");
             await page.ClickAsync("#dialog ytcp-button:has-text('Submit rating')");
             await Task.Delay(500);
-            
-            await ClickNextButton(page);
+
 
             //Make private
+            //Click to the end
+            while (await page.QuerySelectorAsync("#next-button") is { } nextButton &&
+                await nextButton.IsVisibleAsync())
+            {
+                await nextButton.ClickAsync();
+            }
             Console.WriteLine("Make private");
             await page.ClickAsync("#dialog tp-yt-paper-radio-button[name=\"PRIVATE\"]");
 
