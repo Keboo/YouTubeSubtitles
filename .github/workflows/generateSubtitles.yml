@@ -23,9 +23,10 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v2
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 7.0.x
     - name: Run
-      run: dotnet run --project SubtitleConverter\SubtitleConverter\SubtitleConverter.csproj -- 
+      run: dotnet run 
+        --project SubtitleConverter\SubtitleConverter\SubtitleConverter.csproj -- 
         --output-directory './Subtitles'
         --azure-storage-account-key '${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}'
         --you-tube-client-id '${{ secrets.YOUTUBE_CLIENT_ID }}'
