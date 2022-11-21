@@ -26,7 +26,7 @@ jobs:
       with:
         dotnet-version: 7.0.x
     - name: Setup FFmpeg
-      uses: FedericoCarboni/setup-ffmpeg@v1
+      uses: FedericoCarboni/setup-ffmpeg@v2
     - name: Run
       run: dotnet run 
         --project VideoConverter/VideoConverter.csproj -- 
