@@ -59,9 +59,13 @@ public class YouTubeBrowser
 
             await page.ClickAsync("ytcp-icon-button[aria-label*=\"Upload videos\"]");
 
-            await page.ClickAsync("#select-files-button");
 
-            await AddFileToOpenFileDialog(page, file);
+            int fileAddedAttempt = 0;
+            do
+            {
+                await page.ClickAsync("#select-files-button");
+            } while (!await AddFileToOpenFileDialog(page, file) && ++fileAddedAttempt < 3);
+            
 
             //Set video details
             Console.WriteLine("Setting video details");
@@ -180,13 +184,14 @@ public class YouTubeBrowser
         throw new Exception($"Failed to click on any of the selectors {string.Join(", ", selectors)}");
     }
 
-    private static async Task AddFileToOpenFileDialog(IPage page, FileInfo file)
+    private static async Task<bool> AddFileToOpenFileDialog(IPage page, FileInfo file)
     {
         string windowTitle = await page.GetTitleAsync();
 
         var browserProcess = Process.GetProcesses()
             .Where(x => x.MainWindowTitle.Contains(windowTitle)).ToList();
         await Task.Delay(2000);
+        bool fileAdded = false;
         foreach (var process in browserProcess)
         {
             var callback = new User32.WNDENUMPROC((x, y) =>
@@ -196,12 +201,14 @@ public class YouTubeBrowser
                 {
                     Keyboard.Type(file.FullName);
                     Keyboard.Press(VirtualKeyShort.ENTER);
+                    fileAdded = true;
                     return false;
                 }
                 return true;
             });
             User32.EnumWindows(callback, IntPtr.Zero);
         }
+        return fileAdded;
     }
 
     private async Task HandleRecoveryPrompts(IPage page)
