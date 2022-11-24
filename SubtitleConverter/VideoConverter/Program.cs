@@ -1,5 +1,6 @@
 using Microsoft.Azure.Cosmos.Table;
 using Microsoft.Extensions.Configuration;
+using StreamingTools;
 using StreamingTools.Azure;
 using StreamingTools.Twitch;
 using StreamingTools.YouTube;
@@ -110,38 +111,36 @@ class Program
             VideoRow? row = streamVideoTables.CreateQuery<VideoRow>()
                 .Where(x => x.TwitchVideoId == video.Id)
                 .FirstOrDefault();
-            //if (string.IsNullOrEmpty(twitchVideoId))
-            //{
-            //    if (!string.IsNullOrWhiteSpace(row?.YouTubeVideoId))
-            //    {
-            //        console.Out.WriteLine($"Twitch video {video.Id} already has YouTube id '{row.YouTubeVideoId}'; skipping");
-            //        continue;
-            //    }
-            //}
-            //else if (video.Id != twitchVideoId)
-            //{
-            //    console.Out.WriteLine($"Twitch video {video.Id} does not match target id of '{twitchVideoId}'; skipping");
-            //    continue;
-            //}
-            //console.Out.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
-            //
-            //FileInfo? downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
-            //if (downloadedFilePath is null)
-            //{
-            //    console.Error.WriteLine($"Failed to download video file");
-            //    return 1;
-            //}
-            //console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
-            //
-            //FileInfo? trimmedFilePath = await Ffmpeg.TrimSilence(downloadedFilePath, log: x => console.Out.WriteLine(x));
-            //if (trimmedFilePath is null)
-            //{
-            //    console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
-            //    return 1;
-            //}
-            //console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
+            if (string.IsNullOrEmpty(twitchVideoId))
+            {
+                if (!string.IsNullOrWhiteSpace(row?.YouTubeVideoId))
+                {
+                    console.Out.WriteLine($"Twitch video {video.Id} already has YouTube id '{row.YouTubeVideoId}'; skipping");
+                    continue;
+                }
+            }
+            else if (video.Id != twitchVideoId)
+            {
+                console.Out.WriteLine($"Twitch video {video.Id} does not match target id of '{twitchVideoId}'; skipping");
+                continue;
+            }
+            console.Out.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
 
-            FileInfo trimmedFilePath = new("C:\\Users\\kitok\\Downloads\\1656902270.mp4");
+            FileInfo? downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
+            if (downloadedFilePath is null)
+            {
+                console.Error.WriteLine($"Failed to download video file");
+                return 1;
+            }
+            console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
+
+            FileInfo? trimmedFilePath = await Ffmpeg.TrimSilence(downloadedFilePath, log: x => console.Out.WriteLine(x));
+            if (trimmedFilePath is null)
+            {
+                console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
+                return 1;
+            }
+            console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
 
             var youtubeSection = config.GetSection("YouTube");
             BrowserCredential creds = new(

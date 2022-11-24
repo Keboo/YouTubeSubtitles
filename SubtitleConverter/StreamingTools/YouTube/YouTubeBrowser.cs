@@ -57,15 +57,13 @@ public class YouTubeBrowser
             await page.ClickAsync(":text('Kevin Bost')");
             Console.WriteLine("Switched account");
 
-            await CaptureStateAsync(page, "Upload click");
-            //await page.ClickAsync("ytcp-icon-button[aria-label*=\"Upload videos\"]");
-            await page.ClickAsync("#dialog :text('Select files')");
-
-
+            await page.ClickAsync("ytcp-icon-button[aria-label*=\"Upload videos\"]");
+            
             int fileAddedAttempt = 0;
             do
             {
-                await page.ClickAsync("#select-files-button");
+                await CaptureStateAsync(page, $"Upload click{fileAddedAttempt}");
+                await page.ClickAsync("#dialog :text('Select files')");
             } while (!await AddFileToOpenFileDialog(page, file) && ++fileAddedAttempt < 3);
             
 
