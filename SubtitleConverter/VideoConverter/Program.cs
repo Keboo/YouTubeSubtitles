@@ -80,6 +80,7 @@ class Program
         var configBuilder = new ConfigurationBuilder();
         configBuilder.AddEnvironmentVariables();
         configBuilder.AddUserSecrets(typeof(Program).Assembly);
+
         var config = configBuilder.Build();
         var section = config.GetSection(nameof(VideoConverter));
 
@@ -96,7 +97,7 @@ class Program
         TwitchAPI api = new(settings: new ApiSettings()
         {
             ClientId = twitchClientId,
-            Secret = twitchClientSecret
+            Secret = twitchClientSecret,
         });
 
         var httpClient = new HttpClient();

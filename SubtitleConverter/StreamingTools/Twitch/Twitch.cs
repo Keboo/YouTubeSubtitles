@@ -1,4 +1,6 @@
-﻿namespace StreamingTools.Twitch;
+using System.Net.Http.Headers;
+
+namespace StreamingTools.Twitch;
 
 public class Twitch
 {
@@ -46,7 +48,9 @@ public class Twitch
     {
         var request = new HttpRequestMessage()
         {
-            Content = new StringContent("{\"operationName\":\"PlaybackAccessToken_Template\",\"query\":\"query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: \\\"web\\\", playerBackend: \\\"mediaplayer\\\", playerType: $playerType}) @include(if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: \\\"web\\\", playerBackend: \\\"mediaplayer\\\", playerType: $playerType}) @include(if: $isVod) {    value    signature    __typename  }}\",\"variables\":{\"isLive\":false,\"login\":\"\",\"isVod\":true,\"vodID\":\"" + videoId + "\",\"playerType\":\"embed\"}}"),
+            Content = new StringContent($$$"""
+                {"operationName":"PlaybackAccessToken_Template","query":"query PlaybackAccessToken_Template($login: String!, $isLive: Boolean!, $vodID: ID!, $isVod: Boolean!, $playerType: String!) {  streamPlaybackAccessToken(channelName: $login, params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include(if: $isLive) {    value    signature    __typename  }  videoPlaybackAccessToken(id: $vodID, params: {platform: \"web\", playerBackend: \"mediaplayer\", playerType: $playerType}) @include(if: $isVod) {    value    signature    __typename  }}","variables":{"isLive":false,"login":"","isVod":true,"vodID":"{{{videoId}}}","playerType":"site"}}
+                """),
             Method = HttpMethod.Post,
             RequestUri = new Uri("https://gql.twitch.tv/gql")
         };
@@ -62,8 +66,12 @@ public class Twitch
         var request = new HttpRequestMessage()
         {
             Method = HttpMethod.Get,
-            RequestUri = new Uri($"http://usher.twitch.tv/vod/{videoId}?nauth={accessToken.Value}&nauthsig={accessToken.Signature}&allow_source=true&player=twitchweb")
+            RequestUri = new Uri($"https://usher.ttvnw.net/vod/{videoId}.m3u8?allow_source=true&player_backend=mediaplayer&playlist_include_framerate=true&reassignments_supported=true&sig={accessToken.Signature}&supported_codecs=avc1&token={Uri.UnescapeDataString(accessToken.Value)}&transcode_mode=cbr_v2&cdm=wv&player_version=1.18.0")
         };
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/x-mpegURL"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.apple.mpegurl"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/plain"));
         request.Headers.Add("Client-ID", TwitchClientId);
         HttpResponseMessage response = await httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
