@@ -1,6 +1,6 @@
 using FlaUI.Core.Input;
 using FlaUI.Core.WindowsAPI;
-using PlaywrightSharp;
+using Microsoft.Playwright;
 using User32 = PInvoke.User32;
 
 namespace StreamingTools.YouTube;
@@ -31,25 +31,22 @@ public class YouTubeBrowser
         IReadOnlyCollection<string> playlists,
         IReadOnlyCollection<string> tags)
     {
-        await Playwright.InstallAsync();
         using var playwright = await Playwright.CreateAsync();
 
-        await using var browser = await playwright.Chromium.LaunchAsync(headless: false);
+        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions() { Headless = false });
 
         var page = await browser.NewPageAsync();
         try
         {
-            await page.GoToAsync("https://studio.youtube.com/");
+            await page.GotoAsync("https://studio.youtube.com/");
 
             Console.WriteLine("Performing login");
             await page.TypeAsync("input[type=\"email\"]", Username);
             await page.ClickAsync(":text('Next')");
             await page.WaitForSelectorAsync("input[type=\"password\"]");
             await page.TypeAsync("input[type=\"password\"]", Password);
-            var navTask = page.WaitForNavigationAsync();
             await page.ClickAsync(":text('Next')");
-
-            await navTask;
+            await page.WaitForURLAsync("**/challenge/ipp?*");
 
             await HandleRecoveryPrompts(page);
 
@@ -87,7 +84,7 @@ public class YouTubeBrowser
             await page.ClickAsync("#dialog #recorded-date");
 
             const string dataInputSelector = "#dialog tp-yt-paper-input[aria-label*=\"Enter date\"]";
-            await page.PressAsync($"{dataInputSelector} >> input", "Control+a", timeout: 10_000);
+            await page.PressAsync($"{dataInputSelector} >> input", "Control+a", new() { Timeout = 10_000 });
 
             await page.TypeAsync(dataInputSelector, $"{recordingDate:MM/dd/yyyy}");
             await page.PressAsync($"{dataInputSelector} >> input", "Escape");
@@ -134,11 +131,11 @@ public class YouTubeBrowser
             Console.WriteLine("Waiting for upload to complete");
             await WaitFor(async () =>
             {
-                string statusText = await page.GetInnerTextAsync("#dialog span.ytcp-video-upload-progress");
+                string statusText = await page.InnerTextAsync("#dialog span.ytcp-video-upload-progress");
                 return !statusText.Contains("Uploading");
             }, TimeSpan.FromHours(2));
 
-            string youtubeLink = await page.GetInnerTextAsync("#dialog span.ytcp-video-info");
+            string youtubeLink = await page.InnerTextAsync("#dialog span.ytcp-video-info");
             Console.WriteLine($"Got YouTube link {youtubeLink}");
 
             await page.ClickAsync("#dialog #done-button");
@@ -176,7 +173,7 @@ public class YouTubeBrowser
                     await element.ClickAsync();
                     return;
                 }
-                catch (PlaywrightSharpException)
+                catch (PlaywrightException)
                 { }
                 catch (TimeoutException)
                 { }
@@ -187,7 +184,7 @@ public class YouTubeBrowser
 
     private static async Task<bool> AddFileToOpenFileDialog(IPage page, FileInfo file)
     {
-        string windowTitle = await page.GetTitleAsync();
+        string windowTitle = await page.TitleAsync();
 
         var browserProcess = Process.GetProcesses()
             .Where(x => x.MainWindowTitle.Contains(windowTitle)).ToList();
@@ -238,7 +235,7 @@ public class YouTubeBrowser
                 }
                 if (!emailVerified && clickedConfirm &&
                     await page.QuerySelectorAsync("input[type=\"email\"]") is { } email &&
-                    !string.Equals(RecoveryEmail, await email.GetInnerTextAsync()))
+                    !string.Equals(RecoveryEmail, await email.InnerTextAsync()))
                 {
                     Console.WriteLine($"  - Verifying email");
                     await CaptureStateAsync(page, "EnterRecoveryEmail");
@@ -251,7 +248,7 @@ public class YouTubeBrowser
                     await page.QuerySelectorAsync(":text('Get a verification code at')") is { } textPhone)
                 {
                     await CaptureStateAsync(page, "FoundPhoneStart");
-                    await textPhone.ClickAsync(delay: 100);
+                    await textPhone.ClickAsync(new() { Delay = 100 });
                     string? code = await Get2FACode();
                     if (code is not null)
                     {
@@ -309,8 +306,9 @@ public class YouTubeBrowser
         string directory = Path.GetFullPath("./Data");
         Directory.CreateDirectory(directory);
 
-        await File.WriteAllTextAsync(Path.Combine(directory, $"{count}{identifier}.htm"), await page.GetContentAsync());
-        await page.ScreenshotAsync(Path.Combine(directory, $"{count}{identifier}.png"));
+        await File.WriteAllTextAsync(Path.Combine(directory, $"{count}{identifier}.htm"), await page.ContentAsync());
+        byte[] imageBytes = await page.ScreenshotAsync();
+        await File.WriteAllBytesAsync(Path.Combine(directory, $"{count}{identifier}.png"), imageBytes);
     }
 
     private async Task<string> Get2FACodeAsync()
