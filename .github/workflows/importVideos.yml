@@ -30,7 +30,7 @@ jobs:
     - name: Install Playwright
       run: |
         dotnet tool install --global Microsoft.Playwright.CLI
-        playwright -p .\SubtitleConverter\VideoConverter\VideoConverter.csproj install chromium
+        playwright -p ${{ github.workspace }}\SubtitleConverter\VideoConverter\VideoConverter.csproj install chromium
     - name: Run
       run: dotnet run --project VideoConverter/VideoConverter.csproj -- 
         --twitch-user-id '${{ secrets.TWITCH_USER_ID }}'
