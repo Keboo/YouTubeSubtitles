@@ -31,6 +31,7 @@ public class YouTubeBrowser
         IReadOnlyCollection<string> playlists,
         IReadOnlyCollection<string> tags)
     {
+        await Playwright.InstallAsync();
         using var playwright = await Playwright.CreateAsync();
 
         await using var browser = await playwright.Chromium.LaunchAsync(headless: false);
