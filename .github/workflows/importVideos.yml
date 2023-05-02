@@ -29,7 +29,7 @@ jobs:
       uses: FedericoCarboni/setup-ffmpeg@v2
     - name: dotnet build
       run: |
-        dotnet build --project VideoConverter/VideoConverter.csproj
+        dotnet build VideoConverter/VideoConverter.csproj
     - name: Install Playwright
       run: |
         dotnet tool install --global Microsoft.Playwright.CLI
