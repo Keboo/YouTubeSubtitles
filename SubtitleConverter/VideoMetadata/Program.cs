@@ -43,21 +43,21 @@ do
     response = await listVideosRequest.ExecuteAsync();
     foreach (SearchResult item in response.Items)
     {
-        if (item.Snippet.PublishedAt <= OLDEST_DATE)
+        if (item.Snippet.PublishedAtDateTimeOffset <= OLDEST_DATE)
         {
-            Console.WriteLine($"Found item {item.Snippet.Title} published on {item.Snippet.PublishedAt:d}, ending");
+            Console.WriteLine($"Found item {item.Snippet.Title} published on {item.Snippet.PublishedAtDateTimeOffset:d}, ending");
             return;
         }
         var videoDetails = youtubeService.Videos.List(new[] { "statistics", "snippet" });
         videoDetails.Id = item.Id.VideoId;
         var videoDetailsResponse = await videoDetails.ExecuteAsync();
 
-        Console.WriteLine($"Saving {item.Snippet.Title} ({item.Snippet.PublishedAt:d})");
+        Console.WriteLine($"Saving {item.Snippet.Title} ({item.Snippet.PublishedAtDateTimeOffset:d})");
         await writer.WriteLineAsync($"Activity: Video/Webcast/Podcast");
         await writer.WriteLineAsync($"Primary Area: ");
         await writer.WriteLineAsync($"Secondary Area: ");
         await writer.WriteLineAsync($"Title: {item.Snippet.Title}");
-        await writer.WriteLineAsync($"Date: {item.Snippet.PublishedAt:d}");
+        await writer.WriteLineAsync($"Date: {item.Snippet.PublishedAtDateTimeOffset:d}");
         await writer.WriteLineAsync($"Url: https://youtu.be/{item.Id.VideoId}");
         await writer.WriteLineAsync($"Description: {item.Snippet.Description}");
         await writer.WriteLineAsync($"Views: {videoDetailsResponse.Items[0].Statistics.ViewCount ?? 0}");

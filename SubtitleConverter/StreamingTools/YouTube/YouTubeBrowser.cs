@@ -41,10 +41,10 @@ public class YouTubeBrowser
             await page.GotoAsync("https://studio.youtube.com/");
 
             Console.WriteLine("Performing login");
-            await page.TypeAsync("input[type=\"email\"]", Username);
+            await page.FillAsync("input[type=\"email\"]", Username);
             await page.ClickAsync(":text('Next')");
             await page.WaitForSelectorAsync("input[type=\"password\"]");
-            await page.TypeAsync("input[type=\"password\"]", Password);
+            await page.FillAsync("input[type=\"password\"]", Password);
             await page.ClickAsync(":text('Next')");
             await page.WaitForURLAsync("**/challenge/ipp?*");
 
@@ -70,8 +70,8 @@ public class YouTubeBrowser
             
             var titleRequired = await page.WaitForSelectorAsync(":text('Title (required)')");
             await Task.Delay(500);
-            await page.TypeAsync("#dialog #textbox[aria-label*=\"Add a title that describes your video\"]", title);
-            await page.TypeAsync("#dialog #textbox[aria-label*=\"Tell viewers about your video\"]", description);
+            await page.FillAsync("#dialog #textbox[aria-label*=\"Add a title that describes your video\"]", title);
+            await page.FillAsync("#dialog #textbox[aria-label*=\"Tell viewers about your video\"]", description);
             await page.ClickAsync("#dialog span.ytcp-text-dropdown-trigger:has-text('Select')");
             foreach (var playlist in playlists)
             {
@@ -79,18 +79,18 @@ public class YouTubeBrowser
             }
             await page.ClickAsync("#dialog ytcp-button.done-button[label=\"Done\"]");
             await page.ClickAsync("#dialog div.ytcp-button:has-text('Show more')");
-            await page.TypeAsync("#dialog input[aria-label=\"Tags\"]", string.Join(',', tags));
+            await page.FillAsync("#dialog input[aria-label=\"Tags\"]", string.Join(',', tags));
 
             await page.ClickAsync("#dialog #recorded-date");
 
             const string dataInputSelector = "#dialog tp-yt-paper-input[aria-label*=\"Enter date\"]";
             await page.PressAsync($"{dataInputSelector} >> input", "Control+a", new() { Timeout = 10_000 });
 
-            await page.TypeAsync(dataInputSelector, $"{recordingDate:MM/dd/yyyy}");
+            await page.FillAsync(dataInputSelector, $"{recordingDate:MM/dd/yyyy}");
             await page.PressAsync($"{dataInputSelector} >> input", "Escape");
 
             await page.ClickAsync("#dialog #location >> input");
-            await page.TypeAsync("#dialog #location >> input", "Spokane WA");
+            await page.FillAsync("#dialog #location >> input", "Spokane WA");
             await page.ClickAsync("#dialog tp-yt-paper-item:has-text('Spokane WA')");
 
             await Task.Delay(1_000);
@@ -165,12 +165,12 @@ public class YouTubeBrowser
             if (await TryWaitFor(async () =>
             {
                 element ??= await page.QuerySelectorAsync(selector);
-                return await element.IsVisibleAsync() && await element.IsEnabledAsync();
+                return element is not null && await element.IsVisibleAsync() && await element.IsEnabledAsync();
             }))
             {
                 try
                 {
-                    await element.ClickAsync();
+                    await element!.ClickAsync();
                     return;
                 }
                 catch (PlaywrightException)
@@ -239,7 +239,7 @@ public class YouTubeBrowser
                 {
                     Console.WriteLine($"  - Verifying email");
                     await CaptureStateAsync(page, "EnterRecoveryEmail");
-                    await page.TypeAsync("input[type=\"email\"]", RecoveryEmail);
+                    await page.FillAsync("input[type=\"email\"]", RecoveryEmail);
                     await page.ClickAsync(":text('Next')");
                     await CaptureStateAsync(page, "ExitRecoveryEmail");
                     emailVerified = true;
@@ -252,7 +252,7 @@ public class YouTubeBrowser
                     string? code = await Get2FACode();
                     if (code is not null)
                     {
-                        await page.TypeAsync(":text('Enter the code')", code);
+                        await page.FillAsync(":text('Enter the code')", code);
                         await page.ClickAsync(":text('Next')");
                     }
                     await CaptureStateAsync(page, "FoundPhoneEnd");
@@ -264,7 +264,7 @@ public class YouTubeBrowser
                     string? code = await Get2FACode();
                     if (code is not null)
                     {
-                        await page.TypeAsync(":text('Enter the code')", code);
+                        await page.FillAsync(":text('Enter the code')", code);
                         await page.ClickAsync(":text('Next')");
                     }
                     await CaptureStateAsync(page, "Auto2FAEnd");
