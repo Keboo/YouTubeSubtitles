@@ -145,10 +145,10 @@ class Program
 
             var youtubeSection = config.GetSection("YouTube");
             BrowserCredential creds = new(
-                youTubeUsername ?? youtubeSection["Username"],
-                youTubePassword ?? youtubeSection["Password"],
-                youTubeRecoveryEmail ?? youtubeSection["RecoveryEmail"],
-                youTubeTwoFactorCallbackUrl ?? youtubeSection["TwoFactorCallbackUrl"]);
+                youTubeUsername ?? youtubeSection["Username"] ?? "",
+                youTubePassword ?? youtubeSection["Password"] ?? "",
+                youTubeRecoveryEmail ?? youtubeSection["RecoveryEmail"] ?? "",
+                youTubeTwoFactorCallbackUrl ?? youtubeSection["TwoFactorCallbackUrl"] ?? "");
             string youTubeId = await UploadVideoAsync(creds, trimmedFilePath, video, httpClient);
             await DeleteFile(trimmedFilePath);
 

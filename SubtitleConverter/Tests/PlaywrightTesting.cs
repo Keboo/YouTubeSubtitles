@@ -62,10 +62,10 @@ public class PlaywrightTesting
         await page.GotoAsync("https://studio.youtube.com/");
 
         Console.WriteLine("Performing login");
-        await page.TypeAsync("input[type=\"email\"]", Config.YouTubeUsername);
+        await page.FillAsync("input[type=\"email\"]", Config.YouTubeUsername);
         await page.ClickAsync(":text('Next')");
         await page.WaitForSelectorAsync("input[type=\"password\"]");
-        await page.TypeAsync("input[type=\"password\"]", Config.YouTubePassword);
+        await page.FillAsync("input[type=\"password\"]", Config.YouTubePassword);
         await page.ClickAsync(":text('Next')");
         await page.WaitForURLAsync("**/challenge/ipp?*");
         { }

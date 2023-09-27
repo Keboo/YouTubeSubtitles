@@ -66,7 +66,7 @@ public class Twitch
         var request = new HttpRequestMessage()
         {
             Method = HttpMethod.Get,
-            RequestUri = new Uri($"https://usher.ttvnw.net/vod/{videoId}.m3u8?allow_source=true&player_backend=mediaplayer&playlist_include_framerate=true&reassignments_supported=true&sig={accessToken.Signature}&supported_codecs=avc1&token={Uri.UnescapeDataString(accessToken.Value)}&transcode_mode=cbr_v2&cdm=wv&player_version=1.18.0")
+            RequestUri = new Uri($"https://usher.ttvnw.net/vod/{videoId}.m3u8?allow_source=true&player_backend=mediaplayer&playlist_include_framerate=true&reassignments_supported=true&sig={accessToken.Signature}&supported_codecs=avc1&token={Uri.UnescapeDataString(accessToken.Value!)}&transcode_mode=cbr_v2&cdm=wv&player_version=1.18.0")
         };
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/x-mpegURL"));
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.apple.mpegurl"));
