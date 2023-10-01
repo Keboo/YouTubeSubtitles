@@ -40,13 +40,7 @@ public class YouTubeBrowser
         {
             await page.GotoAsync("https://studio.youtube.com/");
 
-            Console.WriteLine("Performing login");
-            await page.FillAsync("input[type=\"email\"]", Username);
-            await page.ClickAsync(":text('Next')");
-            await page.WaitForSelectorAsync("input[type=\"password\"]");
-            await page.FillAsync("input[type=\"password\"]", Password);
-            await page.ClickAsync(":text('Next')");
-            await page.WaitForURLAsync("**/challenge/ipp?*");
+            await PerformLogin(page);
 
             await HandleRecoveryPrompts(page);
 
@@ -209,7 +203,18 @@ public class YouTubeBrowser
         return fileAdded;
     }
 
-    private async Task HandleRecoveryPrompts(IPage page)
+    public async Task PerformLogin(IPage page)
+    {
+        Console.WriteLine("Performing login");
+        await page.FillAsync("input[type=\"email\"]", Username);
+        await page.ClickAsync(":text('Next')");
+        await page.WaitForSelectorAsync("input[type=\"password\"]");
+        await page.FillAsync("input[type=\"password\"]", Password);
+        await page.ClickAsync(":text('Next')");
+        await page.WaitForURLAsync("**/challenge/ipp?*");
+    }
+
+    public async Task HandleRecoveryPrompts(IPage page)
     {
         //Check for recovery prompts
         bool clickedConfirm = false;
@@ -252,7 +257,7 @@ public class YouTubeBrowser
                     string? code = await Get2FACode();
                     if (code is not null)
                     {
-                        await page.FillAsync(":text('Enter the code')", code);
+                        await page.FillAsync("input[aria-label*=\"Enter the code\"]", code);
                         await page.ClickAsync(":text('Next')");
                     }
                     await CaptureStateAsync(page, "FoundPhoneEnd");
@@ -264,7 +269,7 @@ public class YouTubeBrowser
                     string? code = await Get2FACode();
                     if (code is not null)
                     {
-                        await page.FillAsync(":text('Enter the code')", code);
+                        await page.FillAsync("input[aria-label*=\"Enter the code\"]", code);
                         await page.ClickAsync(":text('Next')");
                     }
                     await CaptureStateAsync(page, "Auto2FAEnd");

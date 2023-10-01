@@ -1,4 +1,3 @@
 ﻿namespace VideoConverter;
 
-public record BrowserCredential(string Username, string Password, string RecoveryEmail, string TwoFactorCallbackUrl)
-{ }
+public record BrowserCredential(string Username, string Password, string RecoveryEmail, string TwoFactorCallbackUrl);

@@ -92,7 +92,7 @@ class Program
         var storageAccount = StorageAccount.Get(azureStorageAccountKey, config);
         var tableClient = storageAccount.CreateCloudTableClient();
         var streamVideoTables = tableClient.GetTableReference("streamvideos");
-        var youtubeSettingsTable = tableClient.GetTableReference("youtubesettings");
+        var youTubeSettingsTable = tableClient.GetTableReference("youtubesettings");
 
         TwitchAPI api = new(settings: new ApiSettings()
         {
@@ -143,12 +143,12 @@ class Program
             }
             console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
 
-            var youtubeSection = config.GetSection("YouTube");
+            var youTubeSection = config.GetSection("YouTube");
             BrowserCredential creds = new(
-                youTubeUsername ?? youtubeSection["Username"] ?? "",
-                youTubePassword ?? youtubeSection["Password"] ?? "",
-                youTubeRecoveryEmail ?? youtubeSection["RecoveryEmail"] ?? "",
-                youTubeTwoFactorCallbackUrl ?? youtubeSection["TwoFactorCallbackUrl"] ?? "");
+                youTubeUsername ?? youTubeSection["Username"] ?? "",
+                youTubePassword ?? youTubeSection["Password"] ?? "",
+                youTubeRecoveryEmail ?? youTubeSection["RecoveryEmail"] ?? "",
+                youTubeTwoFactorCallbackUrl ?? youTubeSection["TwoFactorCallbackUrl"] ?? "");
             string youTubeId = await UploadVideoAsync(creds, trimmedFilePath, video, httpClient);
             await DeleteFile(trimmedFilePath);
 

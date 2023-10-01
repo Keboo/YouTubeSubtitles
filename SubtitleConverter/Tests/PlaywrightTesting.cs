@@ -1,25 +1,8 @@
-using Microsoft.Extensions.Configuration;
 using Microsoft.Playwright;
 using StreamingTools;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace Tests;
-
-public static class Config
-{
-    private static IConfiguration Configuration { get; }
-
-    static Config()
-    {
-        var configBuilder = new ConfigurationBuilder();
-        configBuilder.AddEnvironmentVariables();
-        configBuilder.AddUserSecrets(typeof(Config).Assembly);
-
-        Configuration = configBuilder.Build();
-    }
-
-    public static string YouTubeUsername => Configuration["YouTube:Username"] ?? throw new InvalidOperationException("YouTubeUsername is not configured");
-    public static string YouTubePassword => Configuration["YouTube:Password"] ?? throw new InvalidOperationException("YouTubePassword is not configured");
-}
 
 public class PlaywrightTesting
 {
@@ -68,6 +51,5 @@ public class PlaywrightTesting
         await page.FillAsync("input[type=\"password\"]", Config.YouTubePassword);
         await page.ClickAsync(":text('Next')");
         await page.WaitForURLAsync("**/challenge/ipp?*");
-        { }
     }
 }
