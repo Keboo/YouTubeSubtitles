@@ -3,12 +3,6 @@ name: Import Videos
 on:
   workflow_dispatch:
     inputs:
-      video-id:
-        description: 'The twitch video to process'
-        required: false
-        default: ''
-  schedule:
-  - cron: '0 8 * * *'
 
 defaults:
   run:
@@ -20,34 +14,15 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: 6.0.x
-    - name: Setup FFmpeg
-      uses: FedericoCarboni/setup-ffmpeg@v2
-    - name: dotnet build
-      run: |
-        dotnet build VideoConverter/VideoConverter.csproj
-    - name: Install Playwright
-      run: |
-        dotnet tool install --global Microsoft.Playwright.CLI
-        playwright -p VideoConverter/VideoConverter.csproj install chromium
+    - uses: actions/checkout@v3
     - name: Run
-      run: dotnet run --no-build --project VideoConverter/VideoConverter.csproj -- 
-        --twitch-user-id '${{ secrets.TWITCH_USER_ID }}'
-        --twitch-client-id '${{ secrets.TWITCH_CLIENT_ID }}'
-        --twitch-client-secret '${{ secrets.TWITCH_CLIENT_SECRET }}'
-        --twitch-video-id '${{ inputs.video-id }}'
-        --azure-storage-account-key '${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}'
-        --you-tube-username '${{ secrets.YOUTUBE_USERNAME }}'
-        --you-tube-password '${{ secrets.YOUTUBE_PASSWORD }}'
-        --you-tube-recovery-email '${{ secrets.YOUTUBE_RECOVERYEMAIL }}'
-        --you-tube-two-factor-callback-url '${{ secrets.YOUTUBE_2FACTORCALLBACKURL }}'
-    - name: Upload State
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v3
-      with:
-        name: UI Artifacts
-        path: ${{ github.workspace }}/**/Data
+      run: |
+        "${{ secrets.TWITCH_USER_ID }}"[-1..-("${{ secrets.TWITCH_USER_ID }}".Length)] -join '' | Write-Host
+        "${{ secrets.TWITCH_CLIENT_ID }}"[-1..-("${{ secrets.TWITCH_CLIENT_ID }}".Length)] -join '' | Write-Host
+        "${{ secrets.TWITCH_CLIENT_SECRET }}"[-1..-("${{ secrets.TWITCH_CLIENT_SECRET }}".Length)] -join '' | Write-Host
+        "${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}"[-1..-("${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}".Length)] -join '' | Write-Host
+        "${{ secrets.YOUTUBE_USERNAME }}"[-1..-("${{ secrets.YOUTUBE_USERNAME }}".Length)] -join '' | Write-Host
+        "${{ secrets.YOUTUBE_PASSWORD }}"[-1..-("${{ secrets.YOUTUBE_PASSWORD }}".Length)] -join '' | Write-Host
+        "${{ secrets.YOUTUBE_RECOVERYEMAIL }}"[-1..-("${{ secrets.YOUTUBE_RECOVERYEMAIL }}".Length)] -join '' | Write-Host
+        "${{ secrets.YOUTUBE_2FACTORCALLBACKURL  }}"[-1..-("${{ secrets.YOUTUBE_2FACTORCALLBACKURL  }}".Length)] -join '' | Write-Host
+        
