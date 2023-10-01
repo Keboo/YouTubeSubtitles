@@ -22,4 +22,12 @@ public class YouTubeBrowserTests
         await youTubeBrowser.PerformLogin(page);
         await youTubeBrowser.HandleRecoveryPrompts(page);
     }
+
+    [Fact]
+    public async Task TestUpload()
+    {
+        YouTubeBrowser youTubeBrowser = new(Config.YouTubeUsername, Config.YouTubePassword, Config.YouTubeRecoveryEmail, Config.YouTubeTwoFactorCallbackUrl, HttpClient);
+        FileInfo testFile = new("C:\\Users\\kitok\\Videos\\Output.mp4");
+        await youTubeBrowser.UploadAsync(testFile, "Test", "Description", DateTime.Now, Array.Empty<string>(), Array.Empty<string>());
+    }
 }

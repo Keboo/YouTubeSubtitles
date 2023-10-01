@@ -80,7 +80,7 @@ public class YouTubeBrowser
             const string dataInputSelector = "#dialog tp-yt-paper-input[aria-label*=\"Enter date\"]";
             await page.PressAsync($"{dataInputSelector} >> input", "Control+a", new() { Timeout = 10_000 });
 
-            await page.FillAsync(dataInputSelector, $"{recordingDate:MM/dd/yyyy}");
+            await page.FillAsync(dataInputSelector + " input", $"{recordingDate:MM/dd/yyyy}");
             await page.PressAsync($"{dataInputSelector} >> input", "Escape");
 
             await page.ClickAsync("#dialog #location >> input");
