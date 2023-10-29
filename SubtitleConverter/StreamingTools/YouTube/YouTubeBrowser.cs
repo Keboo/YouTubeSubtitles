@@ -110,10 +110,13 @@ public class YouTubeBrowser
 
             //Make private
             //Click to the end
-            while (await page.QuerySelectorAsync("#next-button") is { } nextButton &&
+            while (await page.QuerySelectorAsync("#dialog #next-button") is { } nextButton &&
                 await nextButton.IsVisibleAsync())
             {
-                await nextButton.ClickAsync();
+                await nextButton.ClickAsync(new() 
+                {
+                    Force = true
+                });
             }
             Console.WriteLine("Make private");
             await page.ClickAsync("#dialog tp-yt-paper-radio-button[name=\"PRIVATE\"]");
