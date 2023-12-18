@@ -47,7 +47,7 @@ jobs:
         --you-tube-two-factor-callback-url '${{ secrets.YOUTUBE_2FACTORCALLBACKURL }}'
     - name: Upload State
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: UI Artifacts
         path: ${{ github.workspace }}/**/Data
