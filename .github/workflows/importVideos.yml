@@ -26,7 +26,7 @@ jobs:
       with:
         dotnet-version: 6.0.x
     - name: Setup FFmpeg
-      uses: FedericoCarboni/setup-ffmpeg@v2
+      uses: FedericoCarboni/setup-ffmpeg@v3
     - name: dotnet build
       run: |
         dotnet build VideoConverter/VideoConverter.csproj
