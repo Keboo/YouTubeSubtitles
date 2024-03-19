@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using StreamingTools.Azure;
 using StreamingTools.YouTube;
 
-DateTime OLDEST_DATE = new(2022, 1, 29);
+DateTime OLDEST_DATE = new(2023, 1, 1);
 
 var configBuilder = new ConfigurationBuilder();
 configBuilder.AddEnvironmentVariables();
