@@ -73,8 +73,8 @@ public class YouTubeBrowser
             }
             await page.ClickAsync("#dialog ytcp-button.done-button[label=\"Done\"]");
 
-
-            await page.ClickAsync("#dialog div.yt-touch-feedback-shape:has-text('Show more')");
+            //Add tags
+            await page.ClickAsync("#dialog button[aria-label=\"Show more\"]");
             await page.FillAsync("#dialog input[aria-label=\"Tags\"]", string.Join(',', tags));
 
             await page.ClickAsync("#dialog #recorded-date");
