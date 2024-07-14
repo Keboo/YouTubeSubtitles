@@ -72,7 +72,9 @@ public class YouTubeBrowser
                 await page.ClickAsync($"#dialog ytcp-ve li.ytcp-checkbox-group:has-text('{playlist}')");
             }
             await page.ClickAsync("#dialog ytcp-button.done-button[label=\"Done\"]");
-            await page.ClickAsync("#dialog div.ytcp-button:has-text('Show more')");
+
+
+            await page.ClickAsync("#dialog div.yt-touch-feedback-shape:has-text('Show more')");
             await page.FillAsync("#dialog input[aria-label=\"Tags\"]", string.Join(',', tags));
 
             await page.ClickAsync("#dialog #recorded-date");
