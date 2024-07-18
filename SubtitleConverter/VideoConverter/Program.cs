@@ -101,7 +101,7 @@ class Program
         });
 
         var httpClient = new HttpClient();
-        var twitchClinet = new Twitch(httpClient);
+        var twitchClient = new Twitch(httpClient);
 
         console.Out.WriteLine("Retrieving videos from twitch");
         var videoResponse = await api.Helix.Videos.GetVideosAsync(userId: twitchUserId);
@@ -127,7 +127,7 @@ class Program
             }
             console.Out.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
 
-            FileInfo? downloadedFilePath = await twitchClinet.DownloadVideoFileAsync(video.Id);
+            FileInfo? downloadedFilePath = await twitchClient.DownloadVideoFileAsync(video.Id);
             if (downloadedFilePath is null)
             {
                 console.Error.WriteLine($"Failed to download video file");
@@ -261,6 +261,11 @@ class Program
         if (video.Title.Contains("WinUI"))
         {
             tags.Add("winui");
+        }
+        if (video.Title.Contains("Velopack"))
+        {
+            tags.Add("velopack");
+            tags.Add("installer");
         }
 
         description += Environment.NewLine + Environment.NewLine + $"Broadcasted live on Twitch -- Watch live at https://twitch.keboo.dev";
