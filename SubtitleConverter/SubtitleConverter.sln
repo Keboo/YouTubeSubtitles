@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
+# 17
 VisualStudioVersion = 17.0.31521.260
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SubtitleConverter", "SubtitleConverter\SubtitleConverter.csproj", "{F0A12AAC-1515-421B-9B95-116508C54DD0}"
@@ -20,7 +20,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{412CE3EB-5887-49AA-B11E-12FFE118C130}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VideoMetadata", "VideoMetadata\VideoMetadata.csproj", "{EF50FB9C-C232-4C6E-B1BE-FCA31E37679B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VideoMetadata", "VideoMetadata\VideoMetadata.csproj", "{EF50FB9C-C232-4C6E-B1BE-FCA31E37679B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KebooBot.Api", "..\AI\KebooBot.Api\KebooBot.Api.csproj", "{178F4E19-076E-4F4E-84B9-7FBCDCB5029E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -48,6 +50,10 @@ Global
 		{EF50FB9C-C232-4C6E-B1BE-FCA31E37679B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF50FB9C-C232-4C6E-B1BE-FCA31E37679B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EF50FB9C-C232-4C6E-B1BE-FCA31E37679B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{178F4E19-076E-4F4E-84B9-7FBCDCB5029E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{178F4E19-076E-4F4E-84B9-7FBCDCB5029E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{178F4E19-076E-4F4E-84B9-7FBCDCB5029E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{178F4E19-076E-4F4E-84B9-7FBCDCB5029E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,6 @@
+@KebooBot.Api_HostAddress = http://localhost:5110
+
+GET {{KebooBot.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

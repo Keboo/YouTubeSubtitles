@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>f0641d01-fdcd-4149-8dc9-dcc00ccbd7fc</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.7" />
+    <PackageReference Include="Microsoft.KernelMemory.AI.AzureOpenAI" Version="0.68.240722.1" />
+    <PackageReference Include="Microsoft.KernelMemory.DocumentStorage.AzureBlobs" Version="0.68.240722.1" />
+    <PackageReference Include="Microsoft.KernelMemory.MemoryDb.Postgres" Version="0.68.240722.1" />
+    <PackageReference Include="Microsoft.KernelMemory.Service.AspNetCore" Version="0.68.240722.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+</Project>
