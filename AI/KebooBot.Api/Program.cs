@@ -1,4 +1,3 @@
-using DocumentFormat.OpenXml.Wordprocessing;
 using KebooBot.Api;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.KernelMemory;
@@ -30,18 +29,19 @@ app.MapGet("/casey", () =>
 .WithName("GetWeatherForecast")
 .WithOpenApi();
 
-app.MapGet("/ingest", async ([FromServices] IKernelMemory memory) =>
+app.MapGet("/ingest", async ([FromServices] IKernelMemory memory, [FromServices] ILogger<Program> logger) =>
 {
     var files = Directory.EnumerateFiles(@"D:\Dev\YouTubeSubtitles\Subtitles")
         .Where(x => Path.GetExtension(x) == ".md")
         //.Where(x => Path.GetFileName(x) == "_dhQL.md")
-        .Take(3)
+        //.Take(3)
         .ToList();
 
     try
     {
         foreach (var file in files)
         {
+            logger.LogInformation("{When}: Processing file {File}", DateTime.Now, file);
             await memory.ImportDocumentAsync(new DocumentUploadRequest()
             {
                 Files = [new DocumentUploadRequest.UploadedFile(Path.GetFileName(file), File.OpenRead(file))],
