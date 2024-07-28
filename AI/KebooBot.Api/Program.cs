@@ -37,21 +37,19 @@ app.MapGet("/ingest", async ([FromServices] IKernelMemory memory, [FromServices]
         //.Take(3)
         .ToList();
 
-    try
+    await Task.WhenAll(files.Select(ProcessFileAsync));
+
+    async Task ProcessFileAsync(string file)
     {
-        foreach (var file in files)
+        DateTime start = DateTime.Now;
+        logger.LogInformation("{When}: Processing file {File}", start, file);
+        await memory.ImportDocumentAsync(new DocumentUploadRequest()
         {
-            logger.LogInformation("{When}: Processing file {File}", DateTime.Now, file);
-            await memory.ImportDocumentAsync(new DocumentUploadRequest()
-            {
-                Files = [new DocumentUploadRequest.UploadedFile(Path.GetFileName(file), File.OpenRead(file))],
-                DocumentId = Path.GetFileName(file)
-            });
-        }
-    }
-    catch
-    {
-        throw;
+            Files = [new DocumentUploadRequest.UploadedFile(Path.GetFileName(file), File.OpenRead(file))],
+            DocumentId = Path.GetFileName(file)
+        });
+        DateTime end = DateTime.Now;
+        logger.LogInformation("{When}: Done processing file {File} in {Duration}", DateTime.Now, file, end - start);
     }
 
     return "Memory is the key";
