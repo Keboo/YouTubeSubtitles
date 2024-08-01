@@ -1,19 +1,20 @@
-﻿using Microsoft.KernelMemory;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.KernelMemory;
 using Microsoft.KernelMemory.AI.OpenAI;
 using Microsoft.KernelMemory.Configuration;
 using Microsoft.KernelMemory.Context;
-using Microsoft.KernelMemory.DataFormats.Text;
 using Microsoft.KernelMemory.Diagnostics;
 using Microsoft.KernelMemory.Pipeline;
 using System.Text;
 using System.Text.RegularExpressions;
-namespace KebooBot.Api;
+namespace KebooBot.Lib;
 
 public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
 {
     private readonly IPipelineOrchestrator _orchestrator;
     private readonly TextPartitioningOptions _options;
     private readonly ILogger<SrtMarkdownPartitioner> _log;
+
     private readonly int _maxTokensPerPartition = int.MaxValue;
 
     /// <inheritdoc />
@@ -40,7 +41,7 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
         _options.Validate();
 
         _log = (loggerFactory ?? DefaultLogger.Factory).CreateLogger<SrtMarkdownPartitioner>();
-        _log.LogInformation("Handler '{StepName}' ready", stepName);
+        _log.LogInformation("Handler '{0}' ready", stepName);
 
         if (orchestrator.EmbeddingGenerationEnabled)
         {
@@ -79,14 +80,14 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
         }
 
         // Allow to override the number of overlapping tokens using context arguments
-        //var overlappingTokens = Math.Max(0, context.GetCustomPartitioningOverlappingTokensOrDefault(_options.OverlappingTokens));
+        var overlappingTokens = Math.Max(0, context.GetCustomPartitioningOverlappingTokensOrDefault(_options.OverlappingTokens));
 
-        //string? chunkHeader = context.GetCustomPartitioningChunkHeaderOrDefault(null);
+        string? chunkHeader = context.GetCustomPartitioningChunkHeaderOrDefault(null);
 
         foreach (DataPipeline.FileDetails uploadedFile in pipeline.Files)
         {
             // Track new files being generated (cannot edit originalFile.GeneratedFiles while looping it)
-            Dictionary<string, DataPipeline.GeneratedFileDetails> newFiles = [];
+            Dictionary<string, DataPipeline.GeneratedFileDetails> newFiles = new();
 
             foreach (KeyValuePair<string, DataPipeline.GeneratedFileDetails> generatedFile in uploadedFile.GeneratedFiles)
             {
@@ -106,7 +107,7 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
 
                 // Use a different partitioning strategy depending on the file type
                 BinaryData partitionContent = await _orchestrator.ReadFileAsync(pipeline, file.Name, cancellationToken).ConfigureAwait(false);
-                
+
                 // Skip empty partitions. Also: partitionContent.ToString() throws an exception if there are no bytes.
                 if (partitionContent.ToArray().Length == 0) { continue; }
 
