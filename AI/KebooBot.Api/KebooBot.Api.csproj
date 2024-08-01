@@ -9,10 +9,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.7" />
-    <PackageReference Include="Microsoft.KernelMemory.AI.AzureOpenAI" Version="0.68.240722.1" />
-    <PackageReference Include="Microsoft.KernelMemory.DocumentStorage.AzureBlobs" Version="0.68.240722.1" />
-    <PackageReference Include="Microsoft.KernelMemory.MemoryDb.Postgres" Version="0.68.240722.1" />
-    <PackageReference Include="Microsoft.KernelMemory.Service.AspNetCore" Version="0.68.240722.1" />
+    <PackageReference Include="Microsoft.KernelMemory.AI.AzureOpenAI" Version="0.69.240727.1" />
+    <PackageReference Include="Microsoft.KernelMemory.DocumentStorage.AzureBlobs" Version="0.69.240727.1" />
+    <PackageReference Include="Microsoft.KernelMemory.MemoryDb.Postgres" Version="0.69.240727.1" />
+    <PackageReference Include="Microsoft.KernelMemory.Service.AspNetCore" Version="0.69.240727.1" />
+    <PackageReference Include="Polly" Version="8.4.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 

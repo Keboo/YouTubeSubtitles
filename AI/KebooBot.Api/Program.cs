@@ -1,6 +1,7 @@
 using KebooBot.Api;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.KernelMemory;
+using Polly;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +38,13 @@ app.MapGet("/ingest", async ([FromServices] IKernelMemory memory, [FromServices]
         //.Take(3)
         .ToList();
 
-    await Task.WhenAll(files.Select(ProcessFileAsync));
+    var retryPolicy = Policy.Handle<Exception>()
+        .RetryAsync(3);
+
+    foreach (var file in files)
+    {
+        await retryPolicy.ExecuteAsync(async () => await ProcessFileAsync(file));
+    }
 
     async Task ProcessFileAsync(string file)
     {
