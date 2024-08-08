@@ -48,10 +48,8 @@ public sealed class Program
             string apiKey = parseResult.CommandResult.GetValue(apiKeyOption)!;
             Uri uri = parseResult.CommandResult.GetValue(ingestEndpoint)!;
 
-            HttpClient client = new()
-            {
-                BaseAddress = uri
-            };
+            HttpClient client = new();
+            client.BaseAddress = uri;
             client.DefaultRequestHeaders.Add("User-Agent", "KebooBot");
             client.DefaultRequestHeaders.Add("Authorization", apiKey);
 
