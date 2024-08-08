@@ -41,7 +41,7 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
         _options.Validate();
 
         _log = (loggerFactory ?? DefaultLogger.Factory).CreateLogger<SrtMarkdownPartitioner>();
-        _log.LogInformation("Handler '{0}' ready", stepName);
+        _log.LogInformation("Handler '{StepName}' ready", stepName);
 
         if (orchestrator.EmbeddingGenerationEnabled)
         {
@@ -114,7 +114,7 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
                 _log.LogDebug("Partitioning MarkDown file {FileName}", file.Name);
                 string content = partitionContent.ToString();
 
-                //TODO: Overlap the sections
+                //TODO: Overlap the sections, look at splitting up based on time.
                 const int maxTokenLength = 250;
 
                 StringBuilder allText = new();
@@ -123,6 +123,8 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
                 foreach (Match match in MatchLineRegex().Matches(content))
                 {
                     string line = match.Groups["Text"].Value + " ";
+                    if (string.Equals("YouTube Video", line, StringComparison.OrdinalIgnoreCase)) continue;
+
                     url ??= match.Groups["Url"].Value;
 
                     tokenCount += DefaultGPTTokenizer.StaticCountTokens(line);
