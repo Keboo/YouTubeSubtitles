@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using System.Net.Http.Json;
 
 namespace KebooBot.Ingest;
 
@@ -87,7 +88,54 @@ public sealed class Program
             { new StringContent("default"), "index" },
             { new StringContent(Guid.NewGuid().ToString()), "documentId" }
         };
-        var response = await client.PostAsync("/upload", formData, token);
+        var response = await client.PostAsync("upload", formData, token);
         response.EnsureSuccessStatusCode();
+
+        var postResponse = await response.Content.ReadFromJsonAsync<PostResponse>();
+        
+        if (string.IsNullOrWhiteSpace(postResponse?.documentId))
+        {
+            Console.WriteLine($"Did not get document id from upload of {file.Name}");
+            return;
+        }
+
+        Console.WriteLine("Waiting for completion");
+        bool? isComplete;
+        do
+        {
+            var content = await client.GetFromJsonAsync<UploadStatus>("upload-status", token);
+            isComplete = content?.completed;
+
+            if (content?.failed == true)
+            {
+                Console.WriteLine($"Failed to ingest file {file.Name}");
+                return;
+            }
+        }
+        while (isComplete != true);
     }
+}
+
+
+public class PostResponse
+{
+    public string index { get; set; }
+    public string documentId { get; set; }
+    public string message { get; set; }
+}
+
+
+
+public class UploadStatus
+{
+    public bool completed { get; set; }
+    public bool failed { get; set; }
+    public bool empty { get; set; }
+    public string index { get; set; }
+    public string document_id { get; set; }
+
+    public DateTime creation { get; set; }
+    public DateTime last_update { get; set; }
+    public string[] steps { get; set; }
+    public string[] completed_steps { get; set; }
 }
