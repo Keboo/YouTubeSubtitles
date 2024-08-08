@@ -53,7 +53,7 @@ public sealed class Program
             client.DefaultRequestHeaders.Add("User-Agent", "KebooBot");
             client.DefaultRequestHeaders.Add("Authorization", apiKey);
 
-            if (fileName is not null)
+            if (!string.IsNullOrWhiteSpace(fileName))
             {
                 FileInfo file = new(Path.Combine(directory.FullName, fileName));
                 if (!file.Exists)
