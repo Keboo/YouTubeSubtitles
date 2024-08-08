@@ -103,7 +103,7 @@ public sealed class Program
         bool? isComplete;
         do
         {
-            var content = await client.GetFromJsonAsync<UploadStatus>("upload-status", token);
+            var content = await client.GetFromJsonAsync<UploadStatus>($"upload-status?index={postResponse.index}&documentId={postResponse.documentId}", token);
             isComplete = content?.completed;
 
             if (content?.failed == true)
