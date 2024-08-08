@@ -12,7 +12,7 @@ public sealed class Program
 
     public static CliConfiguration GetConfiguration()
     {
-        CliOption<string> fileNameOption = new("--file", "-f")
+        CliOption<string> fileNameOption = new("--file-name", "-f")
         {
             Description = "The name of the file to ingest"
         };
