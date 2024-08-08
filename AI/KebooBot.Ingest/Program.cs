@@ -64,9 +64,12 @@ public sealed class Program
             }
             else
             {
-                foreach (FileInfo file in directory.EnumerateFiles())
+                var markdownFiles = directory.GetFiles("*.md");
+                int fileCount = 1;
+                foreach (FileInfo file in markdownFiles)
                 {
                     await IngestFileAsync(file, client);
+                    Console.WriteLine($"Completed {fileCount++} of {markdownFiles.Length}");
                 }
             }
 
