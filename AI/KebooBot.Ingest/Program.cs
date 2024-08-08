@@ -27,7 +27,7 @@ public sealed class Program
             Description = "The API key",
             Required = true
         };
-        CliOption<Uri> ingestEndpoint = new("--endpoint", "-e")
+        CliOption<string> ingestEndpoint = new("--endpoint", "-e")
         {
             Description = "The ingest endpoint",
             Required = true
@@ -41,15 +41,15 @@ public sealed class Program
             ingestEndpoint
         };
 
-        rootCommand.SetAction(async (ParseResult parseResult) =>
+        rootCommand.SetAction(async (ParseResult parseResult, CancellationToken token) =>
         {
             string? fileName = parseResult.CommandResult.GetValue(fileNameOption);
             DirectoryInfo directory = parseResult.CommandResult.GetValue(directoryOption)!;
             string apiKey = parseResult.CommandResult.GetValue(apiKeyOption)!;
-            Uri uri = parseResult.CommandResult.GetValue(ingestEndpoint)!;
+            string uri = parseResult.CommandResult.GetValue(ingestEndpoint)!;
 
             HttpClient client = new();
-            client.BaseAddress = uri;
+            client.BaseAddress = new Uri(uri);
             client.DefaultRequestHeaders.Add("User-Agent", "KebooBot");
             client.DefaultRequestHeaders.Add("Authorization", apiKey);
 
@@ -60,7 +60,7 @@ public sealed class Program
                 {
                     throw new FileNotFoundException($"File {file.FullName} not found");
                 }
-                await IngestFileAsync(file, client);
+                await IngestFileAsync(file, client, token);
             }
             else
             {
@@ -68,7 +68,7 @@ public sealed class Program
                 int fileCount = 1;
                 foreach (FileInfo file in markdownFiles)
                 {
-                    await IngestFileAsync(file, client);
+                    await IngestFileAsync(file, client, token);
                     Console.WriteLine($"Completed {fileCount++} of {markdownFiles.Length}");
                 }
             }
@@ -77,7 +77,7 @@ public sealed class Program
         return new CliConfiguration(rootCommand);
     }
 
-    private static async Task IngestFileAsync(FileInfo file, HttpClient client)
+    private static async Task IngestFileAsync(FileInfo file, HttpClient client, CancellationToken token)
     {
         Console.WriteLine($"Ingesting file '{file}'");
         using var fileStream = file.OpenRead();
@@ -87,6 +87,7 @@ public sealed class Program
             { new StringContent("default"), "index" },
             { new StringContent(Guid.NewGuid().ToString()), "documentId" }
         };
-        await client.PostAsync("/upload", formData);
+        var response = await client.PostAsync("/upload", formData, token);
+        response.EnsureSuccessStatusCode();
     }
 }
