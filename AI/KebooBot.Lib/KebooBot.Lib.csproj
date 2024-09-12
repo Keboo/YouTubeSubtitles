@@ -7,6 +7,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.KernelMemory.AI.AzureOpenAI" Version="0.69.240727.1" />
+		<PackageReference Include="Microsoft.KernelMemory.AI.AzureOpenAI" Version="0.73.240906.1" />
 	</ItemGroup>
 </Project>
