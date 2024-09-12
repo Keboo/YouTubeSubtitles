@@ -1,4 +1,5 @@
 ﻿# Notes
+These commands should be run from the directory ABOVE this project's directory.
 
 Commands to build and push the docker image to Azure Container Registry:
 ```cli

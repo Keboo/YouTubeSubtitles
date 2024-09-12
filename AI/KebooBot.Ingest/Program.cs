@@ -54,6 +54,7 @@ public sealed class Program
             client.DefaultRequestHeaders.Add("User-Agent", "KebooBot");
             client.DefaultRequestHeaders.Add("Authorization", apiKey);
 
+            List<(string Index, string DocumentIt)> pendingDocuments = new();
             if (!string.IsNullOrWhiteSpace(fileName))
             {
                 FileInfo file = new(Path.Combine(directory.FullName, fileName));
@@ -61,7 +62,11 @@ public sealed class Program
                 {
                     throw new FileNotFoundException($"File {file.FullName} not found");
                 }
-                await IngestFileAsync(file, client, token);
+                if (await IngestFileAsync(file, client, token) is { } result)
+                {
+                    pendingDocuments.Add(result);
+                }
+
             }
             else
             {
@@ -69,16 +74,37 @@ public sealed class Program
                 int fileCount = 1;
                 foreach (FileInfo file in markdownFiles)
                 {
-                    await IngestFileAsync(file, client, token);
+                    if (await IngestFileAsync(file, client, token) is { } result)
+                    {
+                        pendingDocuments.Add(result);
+                    }
                     Console.WriteLine($"Completed {fileCount++} of {markdownFiles.Length}");
                 }
+            }
+
+            Console.WriteLine("Waiting for completion");
+            foreach (var (index, documentId) in pendingDocuments)
+            {
+                bool? isComplete;
+                do
+                {
+                    var content = await client.GetFromJsonAsync<UploadStatus>($"upload-status?index={index}&documentId={documentId}", token);
+                    isComplete = content?.completed;
+                    if (content?.failed == true)
+                    {
+                        Console.WriteLine($"Failed to ingest document {documentId}");
+                        break;
+                    }
+                }
+                while (isComplete != true);
+                Console.WriteLine("Document {documentId} is complete");
             }
 
         });
         return new CliConfiguration(rootCommand);
     }
 
-    private static async Task IngestFileAsync(FileInfo file, HttpClient client, CancellationToken token)
+    private static async Task<(string Index, string DocumentId)?> IngestFileAsync(FileInfo file, HttpClient client, CancellationToken token)
     {
         Console.WriteLine($"Ingesting file '{file}'");
         using var fileStream = file.OpenRead();
@@ -96,9 +122,12 @@ public sealed class Program
         if (string.IsNullOrWhiteSpace(postResponse?.documentId))
         {
             Console.WriteLine($"Did not get document id from upload of {file.Name}");
-            return;
+            return null;
         }
+        Console.WriteLine($"Queued document {postResponse.documentId} for index {postResponse.index}");
 
+        return (postResponse.index, postResponse.documentId);
+        /*
         Console.WriteLine("Waiting for completion");
         bool? isComplete;
         do
@@ -113,6 +142,7 @@ public sealed class Program
             }
         }
         while (isComplete != true);
+        */
     }
 }
 
