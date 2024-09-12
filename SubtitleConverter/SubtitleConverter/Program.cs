@@ -5,7 +5,6 @@ using StreamingTools.Azure;
 using StreamingTools.Subtitle;
 using StreamingTools.YouTube;
 using System.CommandLine;
-using System.CommandLine.IO;
 
 namespace SubtitleConverter;
 
@@ -13,28 +12,31 @@ class Program
 {
     static Task Main(string[] args)
     {
-        Option<string> outputDirectory = new("--output-directory", () => ".");
-        Option<string> storageAccountKey = new("--azure-storage-account-key")
+        CliOption<string> outputDirectory = new("--output-directory")
         {
-            IsRequired = true,
+            DefaultValueFactory = _ => ".",
+        };
+        CliOption<string> storageAccountKey = new("--azure-storage-account-key")
+        {
+            Required = true,
             Arity = ArgumentArity.ExactlyOne
         };
-        Option<string?> youTubeClientId = new("--you-tube-client-id")
+        CliOption<string?> youTubeClientId = new("--you-tube-client-id")
         {
-            IsRequired = true,
+            Required = true,
             Arity = ArgumentArity.ExactlyOne
         };
-        Option<string?> youTubeClientSecret = new("--you-tube-client-secret")
+        CliOption<string?> youTubeClientSecret = new("--you-tube-client-secret")
         {
-            IsRequired = true,
+            Required = true,
             Arity = ArgumentArity.ExactlyOne
         };
-        Option<string?> youTubeVideoId = new("--you-tube-video-id")
+        CliOption<string?> youTubeVideoId = new("--you-tube-video-id")
         {
             Arity = ArgumentArity.ZeroOrOne
         };
 
-        RootCommand rootCommand = new()
+        CliRootCommand rootCommand = new()
         {
             outputDirectory,
             storageAccountKey,
@@ -42,15 +44,15 @@ class Program
             youTubeClientSecret,
             youTubeVideoId
         };
-        rootCommand.SetHandler(ctx => MainInvoke(
-            ctx.ParseResult.GetValueForOption(outputDirectory)!,
-            ctx.ParseResult.GetValueForOption(storageAccountKey)!,
-            ctx.ParseResult.GetValueForOption(youTubeClientId)!,
-            ctx.ParseResult.GetValueForOption(youTubeClientSecret)!,
-            ctx.ParseResult.GetValueForOption(youTubeVideoId),
-            ctx.Console
+        rootCommand.SetAction((ctx, ct) => MainInvoke(
+            ctx.GetValue(outputDirectory)!,
+            ctx.GetValue(storageAccountKey)!,
+            ctx.GetValue(youTubeClientId)!,
+            ctx.GetValue(youTubeClientSecret)!,
+            ctx.GetValue(youTubeVideoId),
+            ctx.Configuration.Output
         ));
-        return rootCommand.InvokeAsync(args);
+        return new CliConfiguration(rootCommand).InvokeAsync(args);
     }
 
     /// <summary>
@@ -69,7 +71,7 @@ class Program
         string youTubeClientId,
         string youTubeClientSecret,
         string? youTubeVideoId,
-        IConsole console)
+        TextWriter console)
     {
         var configBuilder = new ConfigurationBuilder();
         configBuilder.AddEnvironmentVariables();
@@ -95,7 +97,7 @@ class Program
                         .Where(x => x.YouTubeVideoId != "" && x.YouTubeVideoId != "Unknown"))
             {
                 if (!string.IsNullOrWhiteSpace(row.SubtitlesUrl)) continue;
-                console.Out.WriteLine($"Converting markdown for YouTube video '{row.YouTubeVideoId}'");
+                console.WriteLine($"Converting markdown for YouTube video '{row.YouTubeVideoId}'");
 
                 await ProcessRow(youTubeService, row, outputDirectory, streamVideoTable, console, token);
             }
@@ -107,16 +109,16 @@ class Program
                         .FirstOrDefault();
             if (row is null)
             {
-                console.Error.WriteLine($"Failed to find video with id {youTubeVideoId}");
+                console.WriteLine($"Failed to find video with id {youTubeVideoId}");
             }
             else
             {
                 if (!string.IsNullOrWhiteSpace(row.SubtitlesUrl))
                 {
-                    console.Out.WriteLine($"Overwriting existing subtitle file {row.SubtitlesUrl}");
+                    console.WriteLine($"Overwriting existing subtitle file {row.SubtitlesUrl}");
                 }
 
-                console.Out.WriteLine($"Converting markdown for YouTube video '{row.YouTubeVideoId}'");
+                console.WriteLine($"Converting markdown for YouTube video '{row.YouTubeVideoId}'");
                 await ProcessRow(youTubeService, row, outputDirectory, streamVideoTable, console, token);
             }
         }
@@ -127,17 +129,17 @@ class Program
         VideoRow row, 
         string outputDirectory,
         CloudTable streamVideoTable,
-        IConsole console,
+        TextWriter console,
         CancellationToken token)
     {
         if (await youTubeService.GetSrtSubtitles(row.YouTubeVideoId!, token) is { } subtitles)
         {
             if (!string.IsNullOrWhiteSpace(subtitles))
             {
-                console.Out.WriteLine("  Got subtitles");
+                console.WriteLine("  Got subtitles");
                 string markdown = Subtitles.ConvertSrtToMarkdown(row.YouTubeVideoId!, subtitles);
                 string fileName = await WriteToFile(outputDirectory, markdown, row.YouTubeVideoId!, row.TwitchPublishedAt);
-                console.Out.WriteLine($"  Wrote markdown to '{fileName}'");
+                console.WriteLine($"  Wrote markdown to '{fileName}'");
 
                 row.SubtitlesUrl = (await Subtitles.GetMarkdownUrl(row, token))?.AbsoluteUri;
 
@@ -152,7 +154,7 @@ class Program
                         video.Snippet?.Description is { } description &&
                         description.Contains(subtitlesUrl) != true)
                     {
-                        console.Out.WriteLine($"Updating video {video.Id} description");
+                        console.WriteLine($"Updating video {video.Id} description");
                         description +=
                             Environment.NewLine +
                             Environment.NewLine +
@@ -165,13 +167,13 @@ class Program
             }
             else
             {
-                console.Out.WriteLine($"  YouTube video '{row.YouTubeVideoId}' not found");
+                console.WriteLine($"  YouTube video '{row.YouTubeVideoId}' not found");
 
                 row.SubtitlesUrl = "YouTube Video Removed";
             }
             TableOperation insertOperation = TableOperation.Merge(row);
             TableResult _ = await streamVideoTable.ExecuteAsync(insertOperation);
-            console.Out.WriteLine($"  Updated table storage url with '{row.SubtitlesUrl}'");
+            console.WriteLine($"  Updated table storage url with '{row.SubtitlesUrl}'");
         }
     }
 

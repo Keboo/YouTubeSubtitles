@@ -5,7 +5,6 @@ using StreamingTools.Azure;
 using StreamingTools.Twitch;
 using StreamingTools.YouTube;
 using System.CommandLine;
-using System.CommandLine.IO;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
 using TwitchVideo = TwitchLib.Api.Helix.Models.Videos.GetVideos.Video;
@@ -16,20 +15,20 @@ class Program
 {
     static Task<int> Main(string[] args)
     {
-        Option<string> twitchUserId = Option("--twitch-user-id");
-        Option<string> twitchClientId = Option("--twitch-client-id");
-        Option<string> twitchClientSecret = Option("--twitch-client-secret");
-        Option<string?> twitchVideoId = new("--twitch-video-id")
+        CliOption<string> twitchUserId = Option("--twitch-user-id");
+        CliOption<string> twitchClientId = Option("--twitch-client-id");
+        CliOption<string> twitchClientSecret = Option("--twitch-client-secret");
+        CliOption<string?> twitchVideoId = new("--twitch-video-id")
         {
             Arity = ArgumentArity.ZeroOrOne
         };
-        Option<string> storageAccountKey = Option("--azure-storage-account-key");
-        Option<string> youTubeUsername = Option("--you-tube-username");
-        Option<string> youTubePassword = Option("--you-tube-password");
-        Option<string> youTubeRecoveryEmail = Option("--you-tube-recovery-email");
-        Option<string> youTubeTwoFactorCallbackUrl = Option("--you-tube-two-factor-callback-url");
+        CliOption<string> storageAccountKey = Option("--azure-storage-account-key");
+        CliOption<string> youTubeUsername = Option("--you-tube-username");
+        CliOption<string> youTubePassword = Option("--you-tube-password");
+        CliOption<string> youTubeRecoveryEmail = Option("--you-tube-recovery-email");
+        CliOption<string> youTubeTwoFactorCallbackUrl = Option("--you-tube-two-factor-callback-url");
 
-        RootCommand rootCommand = new()
+        CliRootCommand rootCommand = new()
         {
             twitchUserId,
             twitchClientId,
@@ -41,24 +40,24 @@ class Program
             youTubeRecoveryEmail,
             youTubeTwoFactorCallbackUrl
         };
-        rootCommand.SetHandler(async ctx =>
+        rootCommand.SetAction(async (ctx, ct) =>
         {
             await MainInvoke(
-                    ctx.Console,
-                    ctx.ParseResult.GetValueForOption(twitchUserId),
-                    ctx.ParseResult.GetValueForOption(twitchClientId),
-                    ctx.ParseResult.GetValueForOption(twitchClientSecret),
-                    ctx.ParseResult.GetValueForOption(twitchVideoId),
-                    ctx.ParseResult.GetValueForOption(storageAccountKey),
-                    ctx.ParseResult.GetValueForOption(youTubeUsername),
-                    ctx.ParseResult.GetValueForOption(youTubePassword),
-                    ctx.ParseResult.GetValueForOption(youTubeRecoveryEmail),
-                    ctx.ParseResult.GetValueForOption(youTubeTwoFactorCallbackUrl)
+                    ctx.Configuration.Output,
+                    ctx.GetValue(twitchUserId),
+                    ctx.GetValue(twitchClientId),
+                    ctx.GetValue(twitchClientSecret),
+                    ctx.GetValue(twitchVideoId),
+                    ctx.GetValue(storageAccountKey),
+                    ctx.GetValue(youTubeUsername),
+                    ctx.GetValue(youTubePassword),
+                    ctx.GetValue(youTubeRecoveryEmail),
+                    ctx.GetValue(youTubeTwoFactorCallbackUrl)
             );
         });
-        return rootCommand.InvokeAsync(args);
+        return new CliConfiguration(rootCommand).InvokeAsync(args);
 
-        static Option<string> Option(string alias)
+        static CliOption<string> Option(string alias)
             => new(alias)
             {
                 Arity = ArgumentArity.ZeroOrOne
@@ -66,7 +65,7 @@ class Program
     }
 
     public static async Task<int> MainInvoke(
-        IConsole console,
+        TextWriter console,
         string? twitchUserId,
         string? twitchClientId,
         string? twitchClientSecret,
@@ -103,7 +102,7 @@ class Program
         var httpClient = new HttpClient();
         var twitchClient = new Twitch(httpClient);
 
-        console.Out.WriteLine("Retrieving videos from twitch");
+        console.WriteLine("Retrieving videos from twitch");
         var videoResponse = await api.Helix.Videos.GetVideosAsync(userId: twitchUserId);
 
         foreach (TwitchVideo video in videoResponse.Videos)
@@ -116,32 +115,32 @@ class Program
             {
                 if (!string.IsNullOrWhiteSpace(row?.YouTubeVideoId))
                 {
-                    console.Out.WriteLine($"Twitch video {video.Id} already has YouTube id '{row.YouTubeVideoId}'; skipping");
+                    console.WriteLine($"Twitch video {video.Id} already has YouTube id '{row.YouTubeVideoId}'; skipping");
                     continue;
                 }
             }
             else if (video.Id != twitchVideoId)
             {
-                console.Out.WriteLine($"Twitch video {video.Id} does not match target id of '{twitchVideoId}'; skipping");
+                console.WriteLine($"Twitch video {video.Id} does not match target id of '{twitchVideoId}'; skipping");
                 continue;
             }
-            console.Out.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
+            console.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
 
             FileInfo? downloadedFilePath = await twitchClient.DownloadVideoFileAsync(video.Id);
             if (downloadedFilePath is null)
             {
-                console.Error.WriteLine($"Failed to download video file");
+                console.WriteLine($"Failed to download video file");
                 return 1;
             }
-            console.Out.WriteLine($"Downloaded video to '{downloadedFilePath}'");
+            console.WriteLine($"Downloaded video to '{downloadedFilePath}'");
 
-            FileInfo? trimmedFilePath = await Ffmpeg.TrimSilence(downloadedFilePath, log: x => console.Out.WriteLine(x));
+            FileInfo? trimmedFilePath = await Ffmpeg.TrimSilence(downloadedFilePath, log: x => console.WriteLine(x));
             if (trimmedFilePath is null)
             {
-                console.Error.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
+                console.WriteLine($"Failed to trim silence from '{downloadedFilePath}'");
                 return 1;
             }
-            console.Out.WriteLine($"Trimmed silence '{trimmedFilePath}'");
+            console.WriteLine($"Trimmed silence '{trimmedFilePath}'");
 
             var youTubeSection = config.GetSection("YouTube");
             BrowserCredential creds = new(
@@ -154,10 +153,10 @@ class Program
 
             if (string.IsNullOrWhiteSpace(youTubeId))
             {
-                console.Error.WriteLine($"Failed to upload '{trimmedFilePath}'");
+                console.WriteLine($"Failed to upload '{trimmedFilePath}'");
                 return 1;
             }
-            console.Out.WriteLine($"Uploaded to YouTube '{youTubeId}'");
+            console.WriteLine($"Uploaded to YouTube '{youTubeId}'");
 
 
             DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
