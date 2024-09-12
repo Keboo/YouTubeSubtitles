@@ -54,7 +54,7 @@ public sealed class Program
             client.DefaultRequestHeaders.Add("User-Agent", "KebooBot");
             client.DefaultRequestHeaders.Add("Authorization", apiKey);
 
-            List<(string Index, string DocumentIt)> pendingDocuments = new();
+            List<(string Index, string DocumentId)> pendingDocuments = new();
             if (!string.IsNullOrWhiteSpace(fileName))
             {
                 FileInfo file = new(Path.Combine(directory.FullName, fileName));
@@ -83,23 +83,32 @@ public sealed class Program
             }
 
             Console.WriteLine("Waiting for completion");
-            foreach (var (index, documentId) in pendingDocuments)
+            while (pendingDocuments.Count > 0)
             {
-                bool? isComplete;
-                do
+                var currentPendingDocuments = pendingDocuments.ToList();
+                await Task.WhenAll(currentPendingDocuments.Select(async x =>
                 {
-                    var content = await client.GetFromJsonAsync<UploadStatus>($"upload-status?index={index}&documentId={documentId}", token);
-                    isComplete = content?.completed;
-                    if (content?.failed == true)
+                    if (await IsCompleteAsync(x.Index, x.DocumentId))
                     {
-                        Console.WriteLine($"Failed to ingest document {documentId}");
-                        break;
+                        lock (pendingDocuments)
+                        {
+                            pendingDocuments.Remove(x);
+                        }
                     }
-                }
-                while (isComplete != true);
-                Console.WriteLine("Document {documentId} is complete");
+                }));
+                Console.WriteLine($"Pending documents: {pendingDocuments.Count}");
             }
 
+            async Task<bool> IsCompleteAsync(string index, string documentId)
+            {
+                var content = await client.GetFromJsonAsync<UploadStatus>($"upload-status?index={index}&documentId={documentId}", token);
+                if (content?.failed == true)
+                {
+                    Console.WriteLine($"Failed to ingest document {documentId}");
+                    return true;
+                }
+                return content?.completed == true;
+            }
         });
         return new CliConfiguration(rootCommand);
     }
@@ -118,7 +127,7 @@ public sealed class Program
         response.EnsureSuccessStatusCode();
 
         var postResponse = await response.Content.ReadFromJsonAsync<PostResponse>();
-        
+
         if (string.IsNullOrWhiteSpace(postResponse?.documentId))
         {
             Console.WriteLine($"Did not get document id from upload of {file.Name}");
