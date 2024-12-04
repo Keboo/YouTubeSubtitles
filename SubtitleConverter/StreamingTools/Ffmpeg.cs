@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+
 namespace StreamingTools;
 
 public static class Ffmpeg
@@ -28,7 +30,8 @@ public static class Ffmpeg
             EnableRaisingEvents = true,
         })
         {
-            double? lastStartTime = null;
+            BlockingCollection<string?> lines = new();
+
             ffmpegProcess.OutputDataReceived += FfmpegProcess_OutputDataReceived;
             ffmpegProcess.ErrorDataReceived += FfmpegProcess_OutputDataReceived;
 
@@ -36,27 +39,13 @@ public static class Ffmpeg
             ffmpegProcess.BeginOutputReadLine();
             ffmpegProcess.BeginErrorReadLine();
 
+            silenceRegions = GetSilenceRegions(lines);
             await ffmpegProcess.WaitForExitAsync(CancellationToken.None);
+            lines.CompleteAdding();
 
             void FfmpegProcess_OutputDataReceived(object sender, DataReceivedEventArgs e)
             {
-                if (e.Data?.ToString() is { } line)
-                {
-                    if (SilenceStartRegex.Match(line) is { } startMatch &&
-                        startMatch.Success &&
-                        double.TryParse(startMatch.Groups["StartTime"].Value, out double startTime))
-                    {
-                        lastStartTime = startTime;
-                    }
-                    else if (SilenceEndRegex.Match(line) is { } endMatch &&
-                        endMatch.Success &&
-                        double.TryParse(endMatch.Groups["EndTime"].Value, out double endTime) &&
-                        lastStartTime is { } lastStart)
-                    {
-                        silenceRegions.Add((lastStart, endTime));
-                        lastStartTime = null;
-                    }
-                }
+                lines.Add(e.Data);
             }
         }
 
@@ -75,24 +64,13 @@ public static class Ffmpeg
             return filePath;
         }
 
-        for (int i = 0; i < silenceRegions.Count - 1; i++)
-        {
-            if (silenceRegions[i + 1].StartTime - silenceRegions[i].EndTime <= TimeSpan.FromMinutes(1).TotalSeconds)
-            {
-                silenceRegions[i] = (silenceRegions[i].StartTime, silenceRegions[i + 1].EndTime);
-                silenceRegions.RemoveAt(i + 1);
-                i--;
-            }
-        }
-
-        double startSeekTime = silenceRegions[0].EndTime - (minStartSilence ?? TimeSpan.FromSeconds(2)).TotalSeconds;
+        (double startSeekTime, double? endSeekTime) = GetSeekRegion(silenceRegions, minStartSilence, minEndSilence);
 
         StringBuilder argumentBuilder = new();
         argumentBuilder.Append($"-ss \"{startSeekTime:N2}\" ");
 
-        if (silenceRegions.Count > 1)
+        if (endSeekTime is not null)
         {
-            double endSeekTime = silenceRegions.Last().StartTime + (minEndSilence ?? TimeSpan.FromSeconds(18)).TotalSeconds;
             argumentBuilder.Append($"-to \"{endSeekTime}\" ");
         }
 
@@ -113,5 +91,78 @@ public static class Ffmpeg
         }
         File.Move(outputPath, filePath.FullName, true);
         return new FileInfo(filePath.FullName);
+    }
+
+    public static List<(double StartTime, double EndTime)> GetSilenceRegions(BlockingCollection<string?> provideLines)
+    {
+        double? lastStartTime = null;
+        List<(double StartTime, double EndTime)> silenceRegions = new();
+        foreach (var line in provideLines.GetConsumingEnumerable())
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+            if (SilenceStartRegex.Match(line) is { } startMatch &&
+                startMatch.Success &&
+                double.TryParse(startMatch.Groups["StartTime"].Value, out double startTime))
+            {
+                lastStartTime = startTime;
+            }
+            else if (SilenceEndRegex.Match(line) is { } endMatch &&
+                endMatch.Success &&
+                double.TryParse(endMatch.Groups["EndTime"].Value, out double endTime) &&
+                lastStartTime is { } lastStart)
+            {
+                silenceRegions.Add((lastStart, endTime));
+                lastStartTime = null;
+            }
+        }
+        return silenceRegions;
+
+        //if (e.Data?.ToString() is { } line)
+        //{
+        //    if (SilenceStartRegex.Match(line) is { } startMatch &&
+        //        startMatch.Success &&
+        //        double.TryParse(startMatch.Groups["StartTime"].Value, out double startTime))
+        //    {
+        //        lastStartTime = startTime;
+        //    }
+        //    else if (SilenceEndRegex.Match(line) is { } endMatch &&
+        //        endMatch.Success &&
+        //        double.TryParse(endMatch.Groups["EndTime"].Value, out double endTime) &&
+        //        lastStartTime is { } lastStart)
+        //    {
+        //        silenceRegions.Add((lastStart, endTime));
+        //        lastStartTime = null;
+        //    }
+        //}
+    }
+
+    public static (double StartTime, double? EndTime) GetSeekRegion(
+        List<(double StartTime, double EndTime)> silenceRegions,
+        TimeSpan? minStartSilence = null,
+        TimeSpan? minEndSilence = null)
+    {
+        for (int i = 0; i < silenceRegions.Count - 1; i++)
+        {
+            //Combine close silence regions
+            if (silenceRegions[i + 1].StartTime - silenceRegions[i].EndTime <= TimeSpan.FromSeconds(10).TotalSeconds)
+            {
+                silenceRegions[i] = (silenceRegions[i].StartTime, silenceRegions[i + 1].EndTime);
+                silenceRegions.RemoveAt(i + 1);
+                i--;
+            }
+        }
+
+        double startSeekTime = silenceRegions[0].EndTime - (minStartSilence ?? TimeSpan.FromSeconds(2)).TotalSeconds;
+        double? endSeekTime = null;
+
+        if (silenceRegions.Count > 1)
+        {
+            endSeekTime = silenceRegions.Last().StartTime + (minEndSilence ?? TimeSpan.FromSeconds(18)).TotalSeconds;
+        }
+
+        return (startSeekTime, endSeekTime);
     }
 }
