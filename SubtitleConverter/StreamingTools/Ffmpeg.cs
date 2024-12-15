@@ -39,9 +39,10 @@ public static class Ffmpeg
             ffmpegProcess.BeginOutputReadLine();
             ffmpegProcess.BeginErrorReadLine();
 
+            Task ffmpegProcessTask = ffmpegProcess.WaitForExitAsync(CancellationToken.None)
+                .ContinueWith(t => lines.CompleteAdding());
             silenceRegions = GetSilenceRegions(lines);
-            await ffmpegProcess.WaitForExitAsync(CancellationToken.None);
-            lines.CompleteAdding();
+            await ffmpegProcessTask;
 
             void FfmpegProcess_OutputDataReceived(object sender, DataReceivedEventArgs e)
             {
