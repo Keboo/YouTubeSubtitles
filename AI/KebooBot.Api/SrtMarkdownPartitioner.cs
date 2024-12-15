@@ -1,10 +1,12 @@
 ﻿using Microsoft.KernelMemory;
+using Microsoft.KernelMemory.AI;
 using Microsoft.KernelMemory.AI.OpenAI;
 using Microsoft.KernelMemory.Configuration;
 using Microsoft.KernelMemory.Context;
 using Microsoft.KernelMemory.DataFormats.Text;
 using Microsoft.KernelMemory.Diagnostics;
 using Microsoft.KernelMemory.Pipeline;
+using StackExchange.Redis;
 using System.Text;
 using System.Text.RegularExpressions;
 namespace KebooBot.Api;
@@ -58,7 +60,7 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
     }
 
     /// <inheritdoc />
-    public async Task<(bool success, DataPipeline updatedPipeline)> InvokeAsync(
+    public async Task<(ReturnType returnType, DataPipeline updatedPipeline)> InvokeAsync(
         DataPipeline pipeline, CancellationToken cancellationToken = default)
     {
         _log.LogDebug("Partitioning text, pipeline '{Index}/{DocumentId}'", pipeline.Index, pipeline.DocumentId);
@@ -66,7 +68,7 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
         if (pipeline.Files.Count == 0)
         {
             _log.LogWarning("Pipeline '{Index}/{DocumentId}': there are no files to process, moving to next pipeline step.", pipeline.Index, pipeline.DocumentId);
-            return (true, pipeline);
+            return (ReturnType.Success, pipeline);
         }
 
         var context = pipeline.GetContext();
@@ -119,12 +121,13 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
                 StringBuilder allText = new();
                 string? url = null;
                 int tokenCount = 0;
+                GPT4Tokenizer tokenizer = new();
                 foreach (Match match in MatchLineRegex().Matches(content))
                 {
                     string line = match.Groups["Text"].Value + " ";
                     url ??= match.Groups["Url"].Value;
 
-                    tokenCount += DefaultGPTTokenizer.StaticCountTokens(line);
+                    tokenCount += tokenizer.CountTokens(line);
                     allText.Append(line);
 
                     if (tokenCount > maxTokenLength)
@@ -183,7 +186,7 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
             }
         }
 
-        return (true, pipeline);
+        return (ReturnType.Success, pipeline);
     }
 
 #pragma warning disable CA2254 // the msg is always used
@@ -199,5 +202,7 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
 
     [GeneratedRegex(@"^\[(?<Text>[^\]]*)\]\((?<Url>[^\)]*)\)", RegexOptions.Multiline)]
     private static partial Regex MatchLineRegex();
+
+
 }
 

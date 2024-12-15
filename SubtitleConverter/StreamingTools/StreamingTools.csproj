@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FlaUI.Core" Version="4.0.0" />
-    <PackageReference Include="Google.Apis.YouTube.v3" Version="1.68.0.3513" />
-    <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Playwright" Version="1.46.0" />
-    <PackageReference Include="PInvoke.User32" Version="0.7.124" />
-    <PackageReference Include="Polly" Version="8.4.1" />
-    <PackageReference Include="System.Net.NameResolution" Version="4.3.0" />
-    <PackageReference Include="TwitchLib" Version="3.5.3" />
+    <PackageReference Include="FlaUI.Core" />
+    <PackageReference Include="Google.Apis.YouTube.v3" />
+    <PackageReference Include="Microsoft.Azure.Cosmos.Table" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Playwright" />
+    <PackageReference Include="PInvoke.User32" />
+    <PackageReference Include="Polly" />
+    <PackageReference Include="System.Net.NameResolution" />
+    <PackageReference Include="TwitchLib" />
   </ItemGroup>
 </Project>

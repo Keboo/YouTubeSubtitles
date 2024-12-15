@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-	</PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
-	<ItemGroup>
-		<PackageReference Include="Microsoft.KernelMemory.AI.AzureOpenAI" Version="0.73.240906.1" />
-		<PackageReference Include="Microsoft.KernelMemory.Orchestration.AzureQueues" Version="0.73.240906.1" />
-	</ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.KernelMemory.AI.AzureOpenAI" />
+    <PackageReference Include="Microsoft.KernelMemory.Orchestration.AzureQueues" />
+  </ItemGroup>
 </Project>

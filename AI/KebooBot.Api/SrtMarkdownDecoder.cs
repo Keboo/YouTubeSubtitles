@@ -3,6 +3,7 @@ using Microsoft.KernelMemory.Pipeline;
 using Microsoft.KernelMemory.AI.OpenAI;
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.KernelMemory.AI;
 
 namespace KebooBot.Api;
 
@@ -31,12 +32,13 @@ public partial class SrtMarkdownDecoder : IContentDecoder
 
         StringBuilder allText = new();
         int tokenCount = 0;
-        foreach(Match match in MatchLineRegex().Matches(text))
+        GPT4Tokenizer tokenizer = new();
+        foreach (Match match in MatchLineRegex().Matches(text))
         {
             string line = match.Groups["Text"].Value + " ";
             string url = match.Groups["Url"].Value;
 
-            tokenCount += DefaultGPTTokenizer.StaticCountTokens(line);
+            tokenCount += tokenizer.CountTokens(line);
             allText.Append(line);
 
             if (tokenCount > maxTokenLength)
