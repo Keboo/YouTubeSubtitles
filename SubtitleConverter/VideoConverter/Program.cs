@@ -186,14 +186,14 @@ class Program
     {
         string description = video.Description;
 
-        HashSet<string> playlists = new()
-        {
+        HashSet<string> playlists =
+        [
             "C# Programming"
-        };
-        HashSet<string> tags = new()
-        {
+        ];
+        HashSet<string> tags =
+        [
             "programming"
-        };
+        ];
         if (video.Title.Contains("C#"))
         {
             tags.Add("C#");
@@ -265,9 +265,25 @@ class Program
         {
             tags.Add("velopack");
             tags.Add("installer");
+
+            playlists.Add("Velopack");
+
+            description += Environment.NewLine + Environment.NewLine + "Velopack: https://velopack.io";
         }
 
-        description += Environment.NewLine + Environment.NewLine + $"Broadcasted live on Twitch -- Watch live at https://twitch.keboo.dev";
+        if (video.Title.Contains("GitKraken"))
+        {
+            tags.Add("gitkraken");
+
+            playlists.Add("GitKraken");
+        }
+
+        description += """
+
+            GitKraken: https://www.gitkraken.com
+
+            Broadcasted live on Twitch -- Watch live at https://twitch.keboo.dev
+            """;
 
         DateTime recordingDate = video.GetRecordingDate() ?? DateTime.UtcNow.Date;
 
