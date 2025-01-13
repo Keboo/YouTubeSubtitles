@@ -1,6 +1,4 @@
 using Microsoft.Playwright;
-using StreamingTools;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 
 namespace Tests;
 
@@ -24,13 +22,6 @@ public class PlaywrightTesting
 
             await Task.Delay(1000);
         }
-    }
-
-    [Fact]
-    public async Task CanTrimSilence()
-    {
-        FileInfo file = new(@"C:\Users\kitok\Downloads\test.mp4");
-        await Ffmpeg.TrimSilence(file);
     }
 
     [Fact]

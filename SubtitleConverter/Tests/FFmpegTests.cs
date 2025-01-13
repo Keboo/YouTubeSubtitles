@@ -926,4 +926,11 @@ public class FFmpegTests
         var silenceRegions = Ffmpeg.GetSilenceRegions(lines);
         (double start, double? end) = Ffmpeg.GetSeekRegion(silenceRegions);
     }
+
+    [Fact]
+    public async Task CanTrimSilence()
+    {
+        FileInfo file = new(@"C:\Users\kitok\Downloads\Yellow.mp4");
+        var trimmed = await Ffmpeg.TrimSilence(file);
+    }
 }

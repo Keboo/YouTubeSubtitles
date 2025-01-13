@@ -148,7 +148,7 @@ class Program
                     string snippet = "snippet";
                     var videoQuery = youTubeService.Videos.List(snippet);
                     videoQuery.Id = row.YouTubeVideoId;
-                    var videoResponse = await videoQuery.ExecuteAsync();
+                    var videoResponse = await videoQuery.ExecuteAsync(token);
                     if (videoResponse.Items is { Count: > 0 } videos &&
                         videos[0] is { } video &&
                         video.Snippet?.Description is { } description &&
@@ -161,7 +161,7 @@ class Program
                             $"Search video contents here: {subtitlesUrl}";
 
                         video.Snippet.Description = description;
-                        await youTubeService.Videos.Update(video, snippet).ExecuteAsync();
+                        await youTubeService.Videos.Update(video, snippet).ExecuteAsync(token);
                     }
                 }
             }
@@ -172,7 +172,7 @@ class Program
                 row.SubtitlesUrl = "YouTube Video Removed";
             }
             TableOperation insertOperation = TableOperation.Merge(row);
-            TableResult _ = await streamVideoTable.ExecuteAsync(insertOperation);
+            TableResult _ = await streamVideoTable.ExecuteAsync(insertOperation, token);
             console.WriteLine($"  Updated table storage url with '{row.SubtitlesUrl}'");
         }
     }

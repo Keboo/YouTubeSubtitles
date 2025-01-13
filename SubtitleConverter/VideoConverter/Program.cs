@@ -194,27 +194,27 @@ class Program
         [
             "programming"
         ];
-        if (video.Title.Contains("C#"))
+        if (video.Title.Contains("C#", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("C#");
         }
-        if (video.Title.Contains("WPF"))
+        if (video.Title.Contains("WPF", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("C#");
             tags.Add("WPF");
         }
-        if (video.Title.Contains("XAML"))
+        if (video.Title.Contains("XAML", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("XAML");
         }
-        if (video.Title.Contains("Material Design"))
+        if (video.Title.Contains("Material Design", StringComparison.OrdinalIgnoreCase))
         {
             description += Environment.NewLine + Environment.NewLine + "Material Design In XAML Project: https://github.com/MaterialDesignInXAML/MaterialDesignInXamlToolkit";
             tags.Add("material design");
             tags.Add("WPF");
             playlists.Add("Material Design in Xaml");
         }
-        if (video.Title.Contains("System.CommandLine"))
+        if (video.Title.Contains("System.CommandLine", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("C#");
             tags.Add("command line");
@@ -222,7 +222,7 @@ class Program
             playlists.Add("System.CommandLine");
             description += Environment.NewLine + Environment.NewLine + "System.CommandLine: https://github.com/dotnet/command-line-api";
         }
-        if (video.Title.Contains("terraform"))
+        if (video.Title.Contains("terraform", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("terraform");
             tags.Add("azure");
@@ -231,52 +231,65 @@ class Program
             playlists.Add("DevOps");
             playlists.Add("Azure");
         }
-        if (video.Title.Contains("DevOps"))
+        if (video.Title.Contains("DevOps", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("devops");
             playlists.Add("DevOps");
         }
-        if (video.Title.Contains("GitHub"))
+        if (video.Title.Contains("GitHub", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("github");
         }
-        if (video.Title.Contains("GitHub Actions"))
+        if (video.Title.Contains("GitHub Actions", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("github actions");
         }
-        if (video.Title.Contains("K8s") || video.Title.Contains("Kubernetes"))
+        if (video.Title.Contains("K8s", StringComparison.OrdinalIgnoreCase) || video.Title.Contains("Kubernetes", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("kubernetes");
         }
-        if (video.Title.Contains("helm"))
+        if (video.Title.Contains("helm", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("helm");
             tags.Add("kubernetes");
         }
-        if (video.Title.Contains("Azure"))
+        if (video.Title.Contains("Azure", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("azure");
         }
-        if (video.Title.Contains("WinUI"))
+        if (video.Title.Contains("WinUI", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("winui");
         }
-        if (video.Title.Contains("Velopack"))
+        if (video.Title.Contains("Velopack", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("velopack");
             tags.Add("installer");
 
             playlists.Add("Velopack");
 
-            description += Environment.NewLine + Environment.NewLine + "Velopack: https://velopack.io";
-        }
+            description += """
 
-        if (video.Title.Contains("GitKraken"))
+                Velopack: https://velopack.io
+                """;
+        }
+        if (video.Title.Contains("GitKraken", StringComparison.OrdinalIgnoreCase))
         {
             tags.Add("gitkraken");
 
             playlists.Add("GitKraken");
         }
+        if (video.Title.Contains("Avalonia", StringComparison.OrdinalIgnoreCase))
+        {
+            tags.Add("avalonia");
+
+            description += """
+
+                Avalonia UI: https://avaloniaui.net
+                """;
+
+        }
+
 
         description += """
 
