@@ -125,7 +125,7 @@ class Program
                 continue;
             }
             console.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
-
+ 
             FileInfo? downloadedFilePath = await twitchClient.DownloadVideoFileAsync(video.Id);
             if (downloadedFilePath is null)
             {
