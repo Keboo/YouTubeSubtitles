@@ -74,7 +74,7 @@ public sealed partial class SrtMarkdownPartitioner : IPipelineStepHandler
         var context = pipeline.GetContext();
 
         // Allow to override the paragraph size using context arguments
-        var maxTokensPerParagraph = context.GetCustomPartitioningMaxTokensPerParagraphOrDefault(_options.MaxTokensPerParagraph);
+        var maxTokensPerParagraph = context.GetCustomPartitioningMaxTokensPerChunkOrDefault(_options.MaxTokensPerParagraph);
         if (maxTokensPerParagraph > _maxTokensPerPartition)
         {
             throw ParagraphsTooBigForEmbeddingsException(maxTokensPerParagraph, _maxTokensPerPartition, _log);

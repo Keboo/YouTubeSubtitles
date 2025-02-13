@@ -27,7 +27,7 @@ public partial class SrtMarkdownDecoder : IContentDecoder
         _ = await reader.ReadLineAsync(cancellationToken);
         var text = await reader.ReadToEndAsync(cancellationToken);
 
-        List<FileSection> sections = [];
+        List<Chunk> sections = [];
         const int maxTokenLength = 250;
 
         StringBuilder allText = new();
@@ -43,7 +43,7 @@ public partial class SrtMarkdownDecoder : IContentDecoder
 
             if (tokenCount > maxTokenLength)
             {
-                sections.Add(new FileSection(sections.Count, allText.ToString(), false));
+                sections.Add(new Chunk(allText.ToString(), sections.Count));
                 allText.Clear();
                 tokenCount = 0;
             }
@@ -51,7 +51,7 @@ public partial class SrtMarkdownDecoder : IContentDecoder
 
         if (allText.Length > 0)
         {
-            sections.Add(new FileSection(sections.Count, allText.ToString(), false));
+            sections.Add(new Chunk(allText.ToString(), sections.Count));
         }
 
         return new FileContent(MimeTypes.MarkDown)

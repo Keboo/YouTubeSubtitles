@@ -278,7 +278,10 @@ public class YouTubeBrowser
                         await page.ClickAsync(":text('Next')");
                     }
                     await CaptureStateAsync(page, "Auto2FAEnd");
-
+                }
+                if (await page.QuerySelectorAsync(":text('Not now')") is { } notNow)
+                {
+                    await notNow.ClickAsync();
                 }
             }
             catch (Exception)
