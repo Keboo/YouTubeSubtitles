@@ -7,8 +7,8 @@ on:
         description: 'The twitch video to process'
         required: false
         default: ''
-  schedule:
-  - cron: '0 8 * * *'
+  # schedule:
+  # - cron: '0 8 * * *'
 
 defaults:
   run:
