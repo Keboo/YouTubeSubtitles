@@ -1,7 +1,5 @@
-using FlaUI.Core.Input;
-using FlaUI.Core.WindowsAPI;
 using Microsoft.Playwright;
-using User32 = PInvoke.User32;
+//using User32 = PInvoke.User32;
 
 namespace StreamingTools.YouTube;
 
@@ -189,22 +187,22 @@ public class YouTubeBrowser
             .Where(x => x.MainWindowTitle.Contains(windowTitle)).ToList();
         await Task.Delay(2000);
         bool fileAdded = false;
-        foreach (var process in browserProcess)
-        {
-            var callback = new User32.WNDENUMPROC((x, y) =>
-            {
-                if (process.MainWindowHandle == User32.GetParent(x) &&
-                    User32.GetWindowText(x) == "Open")
-                {
-                    Keyboard.Type(file.FullName);
-                    Keyboard.Press(VirtualKeyShort.ENTER);
-                    fileAdded = true;
-                    return false;
-                }
-                return true;
-            });
-            User32.EnumWindows(callback, IntPtr.Zero);
-        }
+        //foreach (var process in browserProcess)
+        //{
+        //    var callback = new User32.WNDENUMPROC((x, y) =>
+        //    {
+        //        if (process.MainWindowHandle == User32.GetParent(x) &&
+        //            User32.GetWindowText(x) == "Open")
+        //        {
+        //            Keyboard.Type(file.FullName);
+        //            Keyboard.Press(VirtualKeyShort.ENTER);
+        //            fileAdded = true;
+        //            return false;
+        //        }
+        //        return true;
+        //    });
+        //    User32.EnumWindows(callback, IntPtr.Zero);
+        //}
         return fileAdded;
     }
 

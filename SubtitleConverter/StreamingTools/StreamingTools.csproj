@@ -1,16 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0-windows</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FlaUI.Core" />
     <PackageReference Include="Google.Apis.YouTube.v3" />
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Playwright" />
-    <PackageReference Include="PInvoke.User32" />
     <PackageReference Include="Polly" />
     <PackageReference Include="System.Net.NameResolution" />
     <PackageReference Include="TwitchLib" />

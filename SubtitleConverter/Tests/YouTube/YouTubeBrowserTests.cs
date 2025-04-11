@@ -1,6 +1,4 @@
 ﻿using Microsoft.Playwright;
-using Microsoft.VisualBasic.Logging;
-using StreamingTools;
 using StreamingTools.YouTube;
 
 namespace Tests.YouTube;
