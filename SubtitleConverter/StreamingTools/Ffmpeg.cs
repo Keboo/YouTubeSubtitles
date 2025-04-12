@@ -7,11 +7,28 @@ public static class Ffmpeg
     private static readonly Regex SilenceStartRegex = new(@"silence_start:\s*(?<StartTime>\d+\.?\d*)");
     private static readonly Regex SilenceEndRegex = new(@"silence_end:\s*(?<EndTime>\d+\.?\d*)\s*\|");
 
-    public static async Task<FileInfo?> TrimSilence(FileInfo filePath,
+    public static async Task<FileInfo?> TrimSilence(
+        FileInfo filePath,
+       TimeSpan? minStartSilence = null,
+       TimeSpan? minEndSilence = null,
+       Action<string>? log = null)
+    {
+        string outputPath = Path.Combine(filePath.DirectoryName!, Path.ChangeExtension(Path.GetFileNameWithoutExtension(filePath.Name) + "_trimmed", filePath.Extension));
+        if (await TrimSilenceAsync(filePath, new FileInfo(outputPath), minStartSilence, minEndSilence, log))
+        {
+            File.Move(outputPath, filePath.FullName, true);
+        }
+        return filePath;
+    }
+
+    public static async Task<bool> TrimSilenceAsync(
+        FileInfo filePath,
+        FileInfo outputFile,
         TimeSpan? minStartSilence = null,
         TimeSpan? minEndSilence = null,
         Action<string>? log = null)
     {
+        Console.WriteLine($"Trimming silence from {filePath.FullName} => {outputFile.FullName}");
         var startInfo = new ProcessStartInfo
         {
             FileName = "ffmpeg",
@@ -30,12 +47,12 @@ public static class Ffmpeg
             EnableRaisingEvents = true,
         })
         {
-            BlockingCollection<string?> lines = new();
+            BlockingCollection<string?> lines = [];
 
             ffmpegProcess.OutputDataReceived += FfmpegProcess_OutputDataReceived;
             ffmpegProcess.ErrorDataReceived += FfmpegProcess_OutputDataReceived;
 
-            if (!ffmpegProcess.Start()) return null;
+            if (!ffmpegProcess.Start()) return false;
             ffmpegProcess.BeginOutputReadLine();
             ffmpegProcess.BeginErrorReadLine();
 
@@ -62,7 +79,7 @@ public static class Ffmpeg
         if (silenceRegions.Count == 0)
         {
             log?.Invoke("Did not find any silence");
-            return filePath;
+            return false;
         }
 
         (double startSeekTime, double? endSeekTime) = GetSeekRegion(silenceRegions, minStartSilence, minEndSilence);
@@ -75,8 +92,7 @@ public static class Ffmpeg
             argumentBuilder.Append($"-to \"{endSeekTime}\" ");
         }
 
-        string outputPath = Path.Combine(filePath.DirectoryName!, Path.ChangeExtension(Path.GetFileNameWithoutExtension(filePath.Name) + "_trimmed", filePath.Extension));
-        argumentBuilder.Append($"-i \"{filePath}\" -c copy -loglevel error -y {outputPath}");
+        argumentBuilder.Append($"-i \"{filePath}\" -c copy -loglevel error -y \"{outputFile.FullName}\"");
 
         startInfo = new ProcessStartInfo
         {
@@ -89,9 +105,11 @@ public static class Ffmpeg
         if (Process.Start(startInfo) is { } ffmpegTrimProcess)
         {
             await ffmpegTrimProcess.WaitForExitAsync(CancellationToken.None);
+            Console.WriteLine("Trimmed silence");
+            return true;
         }
-        File.Move(outputPath, filePath.FullName, true);
-        return new FileInfo(filePath.FullName);
+        Console.WriteLine("Failed to trim silence");
+        return false;
     }
 
     public static List<(double StartTime, double EndTime)> GetSilenceRegions(BlockingCollection<string?> provideLines)

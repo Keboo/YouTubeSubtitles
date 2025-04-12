@@ -128,15 +128,15 @@ public static class Twitch
 
         var twitchClient = new StreamingTools.Twitch.Twitch(HttpClient);
 
-        FileInfo? downloadedFilePath = await twitchClient.DownloadVideoFileAsync(video.Id);
-        if (downloadedFilePath is null)
+        FileInfo outputFile = GetOutputFile(video, outputDirectory);
+
+        if (!await twitchClient.DownloadVideoFileAsync(video.Id, outputFile))
         {
             Console.WriteLine($"Failed to download video file");
             return false;
         }
 
-        downloadedFilePath.MoveTo(GetOutputFile(video, outputDirectory).FullName, true);
-        Console.WriteLine($"Downloaded video file to {downloadedFilePath.FullName}");
+        Console.WriteLine($"Downloaded video file to {outputFile.FullName}");
         return true;
     }
 

@@ -19,19 +19,41 @@ public class Twitch
 
         string videoPlaylistUrl = await GetVideoPlaylistUrl(HttpClient, videoId, videoToken);
 
-        return await DownloadVideoFile(videoId, videoPlaylistUrl);
-    }
-
-    private static async Task<FileInfo?> DownloadVideoFile(string videoId, string playlistUrl)
-    {
-        //Assumes ffmpeg is defined on the path
         DirectoryInfo directory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "VideoConverter"));
         FileInfo tempFile = new(Path.Combine(directory.FullName, $"{videoId}.mp4"));
+
         if (tempFile.Exists) return tempFile;
+
+        if (await DownloadVideoFile(videoId, videoPlaylistUrl, tempFile))
+        {
+            return tempFile;
+        }
+        tempFile.Delete();
+        return null;
+    }
+
+    public async Task<bool> DownloadVideoFileAsync(string videoId, FileInfo outputFile)
+    {
+        VideoPlaybackAccessToken videoToken = await GetVideoPlaybackToken(HttpClient, videoId);
+
+        string videoPlaylistUrl = await GetVideoPlaylistUrl(HttpClient, videoId, videoToken);
+
+        if (!await DownloadVideoFile(videoId, videoPlaylistUrl, outputFile))
+        {
+            outputFile.MoveTo(Path.ChangeExtension(outputFile.FullName, ".bad.mp4"));
+            return false;
+        }
+        return true;
+    }
+
+    private static async Task<bool> DownloadVideoFile(string videoId, string playlistUrl, FileInfo outputFile)
+    {
+        //Assumes ffmpeg is defined on the path
+
         var startInfo = new ProcessStartInfo
         {
             FileName = "ffmpeg",
-            Arguments = $"-i {playlistUrl} -c copy -loglevel quiet -y \"{tempFile}\""
+            Arguments = $"-i {playlistUrl} -c copy -loglevel quiet -y \"{outputFile.FullName}\""
         };
 
         Console.WriteLine($"Running {startInfo.FileName} {startInfo.Arguments}");
@@ -39,9 +61,9 @@ public class Twitch
         if (Process.Start(startInfo) is { } ffmpegProcess)
         {
             await ffmpegProcess.WaitForExitAsync(CancellationToken.None);
-            return tempFile;
+            return true;
         }
-        return null;
+        return false;
     }
 
     private static async Task<VideoPlaybackAccessToken> GetVideoPlaybackToken(HttpClient httpClient, string videoId)
