@@ -28,7 +28,7 @@ public static class Ffmpeg
         TimeSpan? minEndSilence = null,
         Action<string>? log = null)
     {
-        Console.WriteLine($"Trimming silence from {filePath.FullName} => {outputFile.FullName}");
+        log?.Invoke($"Trimming silence from {filePath.FullName} => {outputFile.FullName}");
         var startInfo = new ProcessStartInfo
         {
             FileName = "ffmpeg",
@@ -37,7 +37,7 @@ public static class Ffmpeg
             RedirectStandardError = true,
             UseShellExecute = false
         };
-        List<(double StartTime, double EndTime)> silenceRegions = new();
+        List<(double StartTime, double EndTime)> silenceRegions = [];
 
         log?.Invoke($"Running {startInfo.FileName} {startInfo.Arguments}");
 
@@ -105,10 +105,10 @@ public static class Ffmpeg
         if (Process.Start(startInfo) is { } ffmpegTrimProcess)
         {
             await ffmpegTrimProcess.WaitForExitAsync(CancellationToken.None);
-            Console.WriteLine("Trimmed silence");
+            log?.Invoke("Trimmed silence");
             return true;
         }
-        Console.WriteLine("Failed to trim silence");
+        log?.Invoke("Failed to trim silence");
         return false;
     }
 
@@ -138,24 +138,6 @@ public static class Ffmpeg
             }
         }
         return silenceRegions;
-
-        //if (e.Data?.ToString() is { } line)
-        //{
-        //    if (SilenceStartRegex.Match(line) is { } startMatch &&
-        //        startMatch.Success &&
-        //        double.TryParse(startMatch.Groups["StartTime"].Value, out double startTime))
-        //    {
-        //        lastStartTime = startTime;
-        //    }
-        //    else if (SilenceEndRegex.Match(line) is { } endMatch &&
-        //        endMatch.Success &&
-        //        double.TryParse(endMatch.Groups["EndTime"].Value, out double endTime) &&
-        //        lastStartTime is { } lastStart)
-        //    {
-        //        silenceRegions.Add((lastStart, endTime));
-        //        lastStartTime = null;
-        //    }
-        //}
     }
 
     public static (double StartTime, double? EndTime) GetSeekRegion(
@@ -179,7 +161,7 @@ public static class Ffmpeg
 
         if (silenceRegions.Count > 1)
         {
-            endSeekTime = silenceRegions.Last().StartTime + (minEndSilence ?? TimeSpan.FromSeconds(18)).TotalSeconds;
+            endSeekTime = silenceRegions.Last().StartTime + (minEndSilence ?? TimeSpan.FromSeconds(15)).TotalSeconds;
         }
 
         return (startSeekTime, endSeekTime);

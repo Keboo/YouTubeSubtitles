@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using StreamingTools.Data;
 using StreamingTools.Twitch;
+using System.CommandLine;
 using TwitchLib.Api;
 using TwitchLib.Api.Core;
 
@@ -9,11 +10,72 @@ using TwitchVideo = TwitchLib.Api.Helix.Models.Videos.GetVideos.Video;
 
 namespace Keboo.Editor;
 
-public static class Twitch
+public class TwitchCommand : CliCommand
 {
+    private CliOption<string> UserIdOption { get; } = new("--twitch-user-id")
+    {
+        DefaultValueFactory = _ => Environment.GetEnvironmentVariable("KebooTwitchUserId") ?? "",
+        Required = true
+    };
+
+    private CliOption<string> ClientIdOption { get; } = new("--twitch-client-id")
+    {
+        DefaultValueFactory = _ => Environment.GetEnvironmentVariable("KebooTwitchClientId") ?? "",
+        Required = true
+    };
+
+    private CliOption<string> ClientSecretOption { get; } = new("--twitch-client-secret")
+    {
+        DefaultValueFactory = _ => Environment.GetEnvironmentVariable("KebooTwitchClientSecret") ?? "",
+        Required = true
+    };
+
+    private CliOption<string> VideoIdOption { get; } = new("--twitch-video-id");
+    private CliOption<DirectoryInfo> OutputOption { get; } = new("--output")
+    {
+        DefaultValueFactory = _ => new DirectoryInfo(Path.Combine(Path.GetTempPath()))
+    };
+    public TwitchCommand()
+        : base("twitch")
+    {
+        CliCommand twitchDownload = new("download")
+        {
+            UserIdOption,
+            ClientIdOption,
+            ClientSecretOption,
+            VideoIdOption,
+            OutputOption,
+        };
+        Add(twitchDownload);
+
+        twitchDownload.SetAction(async (ctx, ct) =>
+        {
+            string? videoId = ctx.GetValue(VideoIdOption);
+
+            if (!string.IsNullOrEmpty(videoId))
+            {
+                await DownloadSingleAsync(
+                        ctx.GetValue(ClientIdOption)!,
+                        ctx.GetValue(ClientSecretOption)!,
+                        videoId,
+                        ctx.GetValue(OutputOption)!
+                    );
+            }
+            else
+            {
+                await DownloadNewVideos(
+                    ctx.GetValue(ClientIdOption)!,
+                    ctx.GetValue(ClientSecretOption)!,
+                    ctx.GetValue(UserIdOption)!,
+                    ctx.GetValue(OutputOption)!
+                );
+            }
+        });
+    }
+
     private static HttpClient HttpClient { get; } = new();
 
-    public static async Task DownloadNewVideos(string clientId,
+    private static async Task DownloadNewVideos(string clientId,
         string clientSecret, string userId, DirectoryInfo outputDirectory)
     {
         TwitchAPI api = new(settings: new ApiSettings()
@@ -52,7 +114,7 @@ public static class Twitch
         }
     }
 
-    public static async Task DownloadSingleAsync(string clientId,
+    private static async Task DownloadSingleAsync(string clientId,
         string clientSecret, string videoId, DirectoryInfo outputDirectory)
     {
         TwitchAPI api = new(settings: new ApiSettings()
