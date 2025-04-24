@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using StreamingTools.Data;
 using StreamingTools.Twitch;
 using System.CommandLine;
@@ -132,7 +131,7 @@ public class TwitchCommand : CliCommand
             return;
         }
 
-        var twitchClient = new StreamingTools.Twitch.Twitch(HttpClient);
+        var twitchClient = new Twitch(HttpClient);
 
         using StreamingDbContext dbContext = await GetDbContextAsync();
 

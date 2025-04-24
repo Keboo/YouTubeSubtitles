@@ -1,24 +1,28 @@
 using Microsoft.Playwright;
-//using User32 = PInvoke.User32;
 
 namespace StreamingTools.YouTube;
 
 public class YouTubeBrowser
 {
     private int _Counter;
-    private string Username { get; }
-    private string Password { get; }
-    private string RecoveryEmail { get; }
-    private string TwoFactorCallbackUrl { get; }
+    private string? Username { get; }
+    private string? Password { get; }
+    private string? RecoveryEmail { get; }
+    private string? TwoFactorCallbackUrl { get; }
     private HttpClient HttpClient { get; }
 
+    public YouTubeBrowser(HttpClient httpClient)
+    {
+        HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+    }
+
     public YouTubeBrowser(string username, string password, string recoveryEmail, string twoFactorCallbackUrl, HttpClient httpClient)
+        : this(httpClient)
     {
         Username = username ?? throw new ArgumentNullException(nameof(username));
         Password = password ?? throw new ArgumentNullException(nameof(password));
         RecoveryEmail = recoveryEmail ?? throw new ArgumentNullException(nameof(recoveryEmail));
         TwoFactorCallbackUrl = twoFactorCallbackUrl ?? throw new ArgumentNullException(nameof(twoFactorCallbackUrl));
-        HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     }
 
     public async Task<string> UploadAsync(
@@ -31,16 +35,36 @@ public class YouTubeBrowser
     {
         using var playwright = await Playwright.CreateAsync();
 
-        await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions() { Headless = false });
+        //await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions() { Headless = false });
+        await using var browser = await playwright.Chromium.LaunchPersistentContextAsync("C:\\Users\\kitok\\AppData\\Local\\Microsoft\\Edge\\User Data\\Profile 2", new BrowserTypeLaunchPersistentContextOptions()
+        {
+            Channel = "msedge",
+            Headless = false,
+        });
 
         var page = await browser.NewPageAsync();
         try
         {
             await page.GotoAsync("https://studio.youtube.com/");
 
-            await PerformLogin(page);
+            if (Username is not null &&
+                Password is not null &&
+                RecoveryEmail is not null &&
+                TwoFactorCallbackUrl is not null)
+            {
+                await PerformLogin(page);
+                await HandleRecoveryPrompts(page);
+            }
+            else
+            {
+                Console.WriteLine("Waiting for manual login...");
+                await page.WaitForSelectorAsync("#avatar-btn", new()
+                {
+                    Timeout = 5 * 60 * 1_000
+                });
+                Console.WriteLine("Login complete");
 
-            await HandleRecoveryPrompts(page);
+            }
 
             await page.ClickAsync("#avatar-btn");
             await page.ClickAsync(":text('Switch account')");
@@ -48,18 +72,18 @@ public class YouTubeBrowser
             Console.WriteLine("Switched account");
 
             await page.ClickAsync("ytcp-icon-button[aria-label*=\"Upload videos\"]");
-            
+
             int fileAddedAttempt = 0;
             do
             {
                 await CaptureStateAsync(page, $"Upload click{fileAddedAttempt}");
                 await page.ClickAsync("#dialog :text('Select files')");
             } while (!await AddFileToOpenFileDialog(page, file) && ++fileAddedAttempt < 3);
-            
+
 
             //Set video details
             Console.WriteLine("Setting video details");
-            
+
             var titleRequired = await page.WaitForSelectorAsync(":text('Title (required)')");
             await Task.Delay(500);
             await page.FillAsync("#dialog #textbox[aria-label*=\"Add a title that describes your video\"]", title);
@@ -113,7 +137,7 @@ public class YouTubeBrowser
             while (await page.QuerySelectorAsync("#dialog #next-button") is { } nextButton &&
                 await nextButton.IsVisibleAsync())
             {
-                await nextButton.ClickAsync(new() 
+                await nextButton.ClickAsync(new()
                 {
                     Force = true
                 });
@@ -209,10 +233,10 @@ public class YouTubeBrowser
     public async Task PerformLogin(IPage page)
     {
         Console.WriteLine("Performing login");
-        await page.FillAsync("input[type=\"email\"]", Username);
+        await page.FillAsync("input[type=\"email\"]", Username!);
         await page.ClickAsync(":text('Next')");
         await page.WaitForSelectorAsync("input[type=\"password\"]");
-        await page.FillAsync("input[type=\"password\"]", Password);
+        await page.FillAsync("input[type=\"password\"]", Password!);
         await page.ClickAsync(":text('Next')");
         await page.WaitForURLAsync("**/challenge/ipp?*");
     }
@@ -247,7 +271,7 @@ public class YouTubeBrowser
                 {
                     Console.WriteLine($"  - Verifying email");
                     await CaptureStateAsync(page, "EnterRecoveryEmail");
-                    await page.FillAsync("input[type=\"email\"]", RecoveryEmail);
+                    await page.FillAsync("input[type=\"email\"]", RecoveryEmail!);
                     await page.ClickAsync(":text('Next')");
                     await CaptureStateAsync(page, "ExitRecoveryEmail");
                     emailVerified = true;

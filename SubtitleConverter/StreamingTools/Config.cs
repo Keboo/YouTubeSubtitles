@@ -2,7 +2,7 @@
 using Azure.Identity;
 using Microsoft.Extensions.Configuration;
 
-namespace Tests;
+namespace StreamingTools;
 
 public static class Config
 {
