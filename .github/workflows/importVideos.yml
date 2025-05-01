@@ -17,12 +17,6 @@ jobs:
     - uses: actions/checkout@v3
     - name: Run
       run: |
-        "${{ secrets.TWITCH_USER_ID }}"[-1..-("${{ secrets.TWITCH_USER_ID }}".Length)] -join '' | Write-Host
-        "${{ secrets.TWITCH_CLIENT_ID }}"[-1..-("${{ secrets.TWITCH_CLIENT_ID }}".Length)] -join '' | Write-Host
-        "${{ secrets.TWITCH_CLIENT_SECRET }}"[-1..-("${{ secrets.TWITCH_CLIENT_SECRET }}".Length)] -join '' | Write-Host
-        "${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}"[-1..-("${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}".Length)] -join '' | Write-Host
-        "${{ secrets.YOUTUBE_USERNAME }}"[-1..-("${{ secrets.YOUTUBE_USERNAME }}".Length)] -join '' | Write-Host
-        "${{ secrets.YOUTUBE_PASSWORD }}"[-1..-("${{ secrets.YOUTUBE_PASSWORD }}".Length)] -join '' | Write-Host
-        "${{ secrets.YOUTUBE_RECOVERYEMAIL }}"[-1..-("${{ secrets.YOUTUBE_RECOVERYEMAIL }}".Length)] -join '' | Write-Host
-        "${{ secrets.YOUTUBE_2FACTORCALLBACKURL  }}"[-1..-("${{ secrets.YOUTUBE_2FACTORCALLBACKURL  }}".Length)] -join '' | Write-Host
+        "${{ secrets.YOUTUBE_CLIENT_ID }}"[-1..-("${{ secrets.YOUTUBE_CLIENT_ID }}".Length)] -join '' | Write-Host
+        "${{ secrets.YOUTUBE_CLIENT_SECRET }}"[-1..-("${{ secrets.YOUTUBE_CLIENT_SECRET }}".Length)] -join '' | Write-Host
         
