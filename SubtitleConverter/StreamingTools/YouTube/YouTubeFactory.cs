@@ -3,6 +3,7 @@ using Google.Apis.Services;
 using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Microsoft.Extensions.Configuration;
+using StreamingTools.Azure;
 
 namespace StreamingTools.YouTube;
 
@@ -11,6 +12,11 @@ public static class YouTubeFactory
     public static async Task<YouTubeService> GetService(string prefix)
     {
         return await GetServiceAsync(new EnvironmentVariablesDataStore(prefix), null, null);
+    }
+
+    public static async Task<YouTubeService> GetService()
+    {
+        return await GetServiceAsync(new KeyVaultStorage(new("https://streamautomation.vault.azure.net/"), "Google"), Config.YouTubeClientId, Config.YouTubeClientSecret, YouTubeService.Scope.YoutubeForceSsl);
     }
 
     public static async Task<YouTubeService> GetServiceAsync(
@@ -62,7 +68,7 @@ public static class YouTubeFactory
 
         var stream = new MemoryStream();
         using var sw = new StreamWriter(stream);
-        string value = System.Text.Json.JsonSerializer.Serialize(new
+        string value = JsonSerializer.Serialize(new
         {
             installed = new
             {

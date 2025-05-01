@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Keboo.Editor": {
+      "commandName": "Project",
+      "commandLineArgs": "youtube listing"
+    }
+  }
+}

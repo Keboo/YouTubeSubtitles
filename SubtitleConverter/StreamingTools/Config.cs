@@ -41,6 +41,8 @@ public static class Config
         }
     }
 
+    public static string YouTubeClientId => Configuration["YouTube:ClientId"] ?? throw new InvalidOperationException("YouTube Client Id is not configured");
+    public static string YouTubeClientSecret => Configuration["YouTube:ClientSecret"] ?? throw new InvalidOperationException("YouTube Client Secret is not configured");
     public static string YouTubeUsername => Configuration["YouTube:Username"] ?? throw new InvalidOperationException("YouTube Username is not configured");
     public static string YouTubePassword => Configuration["YouTube:Password"] ?? throw new InvalidOperationException("YouTube Password is not configured");
     public static string YouTubeRecoveryEmail => Configuration["YouTube:RecoveryEmail"] ?? throw new InvalidOperationException("YouTube RecoveryEmail is not configured");

@@ -7,8 +7,6 @@ namespace Keboo.Editor;
 
 public partial class YouTubeCommand : CliCommand
 {
-    private static HttpClient HttpClient { get; } = new();
-
     private CliOption<FileInfo> InputOption { get; } = new CliOption<FileInfo>("--input", "-i")
     {
         Description = "An input file",
@@ -23,11 +21,6 @@ public partial class YouTubeCommand : CliCommand
             InputOption
         };
         Add(uploadCommand);
-
-        var installDependenciesCommand = new CliCommand("--install-dependencies");
-        Add(installDependenciesCommand);
-
-
         uploadCommand.SetAction(async (ctx, ct) =>
         {
             FileInfo input = ctx.GetValue(InputOption)!;
@@ -180,21 +173,8 @@ public partial class YouTubeCommand : CliCommand
                 """);
         });
 
-        installDependenciesCommand.SetAction(async (ctx, ct) =>
-        {
-            //const string playwrightScript = "pwsh playwright.ps1 install";
-            Console.WriteLine("Downloading Playwright browsers");
-            ProcessStartInfo startInfo = new();
-            startInfo.FileName = "powershell";
-            startInfo.ArgumentList.Add("-File");
-            startInfo.ArgumentList.Add("playwright.ps1");
-            startInfo.ArgumentList.Add("install");
-            startInfo.UseShellExecute = true;
+        var listDrafts = new CliCommand("drafts");
 
-            using var p = Process.Start(startInfo);
-            await p.WaitForExitAsync(ct);
-            Console.WriteLine("Done");
-        });
     }
 
     private static async Task<StreamingDbContext> GetDbContextAsync()

@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using StreamingTools;
 
 namespace Tests;
 

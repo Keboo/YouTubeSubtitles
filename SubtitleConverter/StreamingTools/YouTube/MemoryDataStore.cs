@@ -4,7 +4,7 @@ namespace StreamingTools.YouTube;
 
 public class MemoryDataStore : IDataStore
 {
-    private Dictionary<string, object?> Values { get; } = new();
+    private Dictionary<string, object?> Values { get; } = [];
 
     public Task ClearAsync()
     {
