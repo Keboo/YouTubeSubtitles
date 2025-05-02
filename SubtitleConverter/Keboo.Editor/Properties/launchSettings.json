@@ -1,8 +1,8 @@
 {
   "profiles": {
-    "Keboo.Editor": {
+    "List Drafts": {
       "commandName": "Project",
-      "commandLineArgs": "youtube listing"
+      "commandLineArgs": "youtube drafts"
     }
   }
 }

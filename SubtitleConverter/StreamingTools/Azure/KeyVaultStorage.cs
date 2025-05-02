@@ -1,4 +1,5 @@
-﻿using Azure.Identity;
+﻿using Azure;
+using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Google.Apis.Json;
 using Google.Apis.Util.Store;
@@ -27,15 +28,22 @@ public class KeyVaultStorage : IDataStore
 
     public async Task<T?> GetAsync<T>(string key)
     {
-        var kvSecret = await SecretClient.GetSecretAsync(GetKey(key));
-        string? value = kvSecret.Value.Value;
-        if (string.IsNullOrEmpty(value))
+        try
+        {
+            var kvSecret = await SecretClient.GetSecretAsync(GetKey(key));
+            string? value = kvSecret.Value.Value;
+            if (string.IsNullOrEmpty(value))
+            {
+                return default;
+            }
+            else
+            {
+                return NewtonsoftJsonSerializer.Instance.Deserialize<T?>(value);
+            }
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
         {
             return default;
-        }
-        else
-        {
-            return NewtonsoftJsonSerializer.Instance.Deserialize<T?>(value);
         }
     }
 

@@ -14,7 +14,7 @@ public static class YouTubeFactory
         return await GetServiceAsync(new EnvironmentVariablesDataStore(prefix), null, null);
     }
 
-    public static async Task<YouTubeService> GetService()
+    public static async Task<YouTubeService> GetServiceAsync()
     {
         return await GetServiceAsync(new KeyVaultStorage(new("https://streamautomation.vault.azure.net/"), "Google"), Config.YouTubeClientId, Config.YouTubeClientSecret, YouTubeService.Scope.YoutubeForceSsl);
     }

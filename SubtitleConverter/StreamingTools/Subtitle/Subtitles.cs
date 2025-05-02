@@ -26,7 +26,7 @@ public static class Subtitles
 
         if (await GitHelper.GetRemoteUrl(token) is { } remoteUrl)
         {
-            //TODO: Outut directory is currently hard coded to match workflow
+            //TODO: Output directory is currently hard coded to match workflow
             return new Uri(remoteUrl, $"blob/{branchName}/Subtitles/{fileName}");
         }
         return null;
