@@ -5,13 +5,13 @@ namespace Keboo.Editor;
 
 public class VideoCommand : CliCommand
 {
-    private CliOption<FileSystemInfo> InputOption { get; } = new CliOption<FileSystemInfo>("--input", "-i")
+    private static CliOption<FileSystemInfo> InputOption { get; } = new CliOption<FileSystemInfo>("--input", "-i")
     {
         Description = "An input file or directory",
         Required = true
     }.AcceptExistingOnly();
 
-    private CliOption<FileSystemInfo> OutputOption { get; } = new CliOption<FileSystemInfo>("--output", "-o")
+    private static CliOption<FileSystemInfo> OutputOption { get; } = new CliOption<FileSystemInfo>("--output", "-o")
     {
         Description = "An output file or directory",
         Required = true
@@ -29,8 +29,8 @@ public class VideoCommand : CliCommand
 
         videoTrimCommand.SetAction(async (ctx, ct) =>
         {
-            FileSystemInfo input = ctx.GetValue<FileSystemInfo>("--input")!;
-            FileSystemInfo output = ctx.GetValue<FileSystemInfo>("--output")!;
+            FileSystemInfo input = ctx.GetValue(InputOption)!;
+            FileSystemInfo output = ctx.GetValue(OutputOption)!;
             await Trim(input, output);
         });
     }

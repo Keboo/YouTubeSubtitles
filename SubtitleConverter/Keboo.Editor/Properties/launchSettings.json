@@ -6,11 +6,23 @@
     },
     "Download New Videos": {
       "commandName": "Project",
-      "commandLineArgs": "twitch download"
+      "commandLineArgs": "twitch download --output D:\\Temp"
     },
-    "Do Everything": {
+    "Download Single": {
       "commandName": "Project",
-      "commandLineArgs": "youtube drafts twitch download"
-    },"
+      "commandLineArgs": "twitch download --twitch-video-id 2429692619 --output D:\\Temp"
+    },
+    "Trim Videos": {
+      "commandName": "Project",
+      "commandLineArgs": "video trim --input D:\\Temp --output D:\\Temp"
+    },
+    "Show Description": {
+      "commandName": "Project",
+      "commandLineArgs": "youtube listing --twitch-id 2429692619"
+    },
+    "Process All": {
+      "commandName": "Project",
+      "commandLineArgs": "process"
+    }
   }
 }

@@ -11,26 +11,26 @@ namespace Keboo.Editor;
 
 public class TwitchCommand : CliCommand
 {
-    private CliOption<string> UserIdOption { get; } = new("--twitch-user-id")
+    private static CliOption<string> UserIdOption { get; } = new("--twitch-user-id")
     {
         DefaultValueFactory = _ => Environment.GetEnvironmentVariable("KebooTwitchUserId") ?? "",
         Required = true
     };
 
-    private CliOption<string> ClientIdOption { get; } = new("--twitch-client-id")
+    private static CliOption<string> ClientIdOption { get; } = new("--twitch-client-id")
     {
         DefaultValueFactory = _ => Environment.GetEnvironmentVariable("KebooTwitchClientId") ?? "",
         Required = true
     };
 
-    private CliOption<string> ClientSecretOption { get; } = new("--twitch-client-secret")
+    private static CliOption<string> ClientSecretOption { get; } = new("--twitch-client-secret")
     {
         DefaultValueFactory = _ => Environment.GetEnvironmentVariable("KebooTwitchClientSecret") ?? "",
         Required = true
     };
 
-    private CliOption<string> VideoIdOption { get; } = new("--twitch-video-id");
-    private CliOption<DirectoryInfo> OutputOption { get; } = new("--output")
+    private static CliOption<string> VideoIdOption { get; } = new("--twitch-video-id");
+    private static CliOption<DirectoryInfo> OutputOption { get; } = new("--output")
     {
         DefaultValueFactory = _ => new DirectoryInfo(Path.Combine(Path.GetTempPath()))
     };
@@ -54,23 +54,23 @@ public class TwitchCommand : CliCommand
 
     public static Task Download(ParseResult ctx, CancellationToken token)
     {
-        string? videoId = ctx.GetValue<string>("--twitch-video-id");
+        string? videoId = ctx.GetValue(VideoIdOption);
         if (!string.IsNullOrEmpty(videoId))
         {
             return DownloadSingleAsync(
-                    ctx.GetValue<string>("--twitch-client-id")!,
-                    ctx.GetValue<string>("--twitch-client-secret")!,
+                    ctx.GetValue(ClientIdOption)!,
+                    ctx.GetValue(ClientSecretOption)!,
                     videoId,
-                    ctx.GetValue<DirectoryInfo>("--output")!
+                    ctx.GetValue(OutputOption)!
                 );
         }
         else
         {
             return DownloadNewVideos(
-                ctx.GetValue<string>("--twitch-client-id")!,
-                ctx.GetValue<string>("--twitch-client-secret")!,
-                ctx.GetValue<string>("--twitch-user-id")!,
-                ctx.GetValue<DirectoryInfo>("--output")!
+                ctx.GetValue(ClientIdOption)!,
+                ctx.GetValue(ClientSecretOption)!,
+                ctx.GetValue(UserIdOption)!,
+                ctx.GetValue(OutputOption)!
             );
         }
     }
@@ -126,7 +126,7 @@ public class TwitchCommand : CliCommand
             Secret = clientSecret,
         });
 
-        Console.WriteLine("Retrieving videos from twitch");
+        Console.WriteLine($"Retrieving video {videoId} from twitch");
         var videoResponse = await api.Helix.Videos.GetVideosAsync([videoId]);
 
         if (videoResponse.Videos.Length == 0)
@@ -194,7 +194,7 @@ public class TwitchCommand : CliCommand
     {
         using StreamWriter writer = new($"{videoFile.FullName}.txt");
         string description = StreamingTools.YouTube.Description.Build(video);
-        await writer.WriteLineAsync(video.TwitchDescription);
+        await writer.WriteLineAsync(description);
         Console.WriteLine($"Wrote video description to {videoFile.FullName}.txt");
     }
 
