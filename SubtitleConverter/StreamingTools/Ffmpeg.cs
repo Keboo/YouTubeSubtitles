@@ -105,7 +105,7 @@ public static class Ffmpeg
         if (Process.Start(startInfo) is { } ffmpegTrimProcess)
         {
             await ffmpegTrimProcess.WaitForExitAsync(CancellationToken.None);
-            log?.Invoke("Trimmed silence");
+            log?.Invoke($"Trimmed silence => {outputFile.FullName}");
             return true;
         }
         log?.Invoke("Failed to trim silence");
