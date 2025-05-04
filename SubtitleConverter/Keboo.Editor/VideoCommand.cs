@@ -45,7 +45,17 @@ public class VideoCommand : CliCommand
             //Both are directories process
             foreach (var inputFile in Directory.GetFiles(input.FullName, "*.mp4"))
             {
+                if (inputFile.EndsWith(".trimmed.mp4", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"Skipping trimmed file {inputFile}");
+                    continue;
+                }
                 var outputFile = Path.ChangeExtension(inputFile, ".trimmed.mp4");
+                if (File.Exists(outputFile))
+                {
+                    Console.WriteLine($"Skipping {inputFile} => {outputFile} already exists");
+                    continue;
+                }
                 await Ffmpeg.TrimSilenceAsync(new FileInfo(inputFile), new FileInfo(outputFile), log: Console.WriteLine);
             }
         }

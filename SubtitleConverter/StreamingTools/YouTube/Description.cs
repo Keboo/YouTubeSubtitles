@@ -116,6 +116,7 @@ public static class Description
         description += """
 
                 GitKraken: https://www.gitkraken.com
+                Velopack: https://velopack.io
 
                 Broadcasted live on Twitch -- Watch live at https://twitch.keboo.dev
                 """;
