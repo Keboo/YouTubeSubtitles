@@ -47,34 +47,35 @@ public class TwitchCommand : CliCommand
         };
         Add(twitchDownload);
 
-        twitchDownload.SetAction(async (ctx, ct) =>
-        {
-            string? videoId = ctx.GetValue(VideoIdOption);
-
-            if (!string.IsNullOrEmpty(videoId))
-            {
-                await DownloadSingleAsync(
-                        ctx.GetValue(ClientIdOption)!,
-                        ctx.GetValue(ClientSecretOption)!,
-                        videoId,
-                        ctx.GetValue(OutputOption)!
-                    );
-            }
-            else
-            {
-                await DownloadNewVideos(
-                    ctx.GetValue(ClientIdOption)!,
-                    ctx.GetValue(ClientSecretOption)!,
-                    ctx.GetValue(UserIdOption)!,
-                    ctx.GetValue(OutputOption)!
-                );
-            }
-        });
+        twitchDownload.SetAction(Download);
     }
 
     private static HttpClient HttpClient { get; } = new();
 
-    private static async Task DownloadNewVideos(string clientId,
+    public static Task Download(ParseResult ctx, CancellationToken token)
+    {
+        string? videoId = ctx.GetValue<string>("--twitch-video-id");
+        if (!string.IsNullOrEmpty(videoId))
+        {
+            return DownloadSingleAsync(
+                    ctx.GetValue<string>("--twitch-client-id")!,
+                    ctx.GetValue<string>("--twitch-client-secret")!,
+                    videoId,
+                    ctx.GetValue<DirectoryInfo>("--output")!
+                );
+        }
+        else
+        {
+            return DownloadNewVideos(
+                ctx.GetValue<string>("--twitch-client-id")!,
+                ctx.GetValue<string>("--twitch-client-secret")!,
+                ctx.GetValue<string>("--twitch-user-id")!,
+                ctx.GetValue<DirectoryInfo>("--output")!
+            );
+        }
+    }
+
+    public static async Task DownloadNewVideos(string clientId,
         string clientSecret, string userId, DirectoryInfo outputDirectory)
     {
         TwitchAPI api = new(settings: new ApiSettings()
@@ -108,8 +109,11 @@ public class TwitchCommand : CliCommand
                 continue;
             }
 
-            dbContext.Videos.Add(GetDbVideo(video));
+            dbVideo = GetDbVideo(video);
+            dbContext.Videos.Add(dbVideo);
             await dbContext.SaveChangesAsync();
+
+            await WriteVideoDescriptionAsync(dbVideo, GetOutputFile(video, outputDirectory));
         }
     }
 
@@ -159,6 +163,9 @@ public class TwitchCommand : CliCommand
                 dbVideo.TwitchDescription = video.Description;
                 dbVideo.TwitchUrl = video.Url;
             }
+
+            await WriteVideoDescriptionAsync(dbVideo, GetOutputFile(video, outputDirectory));
+
             await dbContext.SaveChangesAsync();
         }
     }
@@ -183,11 +190,19 @@ public class TwitchCommand : CliCommand
         };
     }
 
+    private static async Task WriteVideoDescriptionAsync(Video video, FileInfo videoFile)
+    {
+        using StreamWriter writer = new($"{videoFile.FullName}.txt");
+        string description = StreamingTools.YouTube.Description.Build(video);
+        await writer.WriteLineAsync(video.TwitchDescription);
+        Console.WriteLine($"Wrote video description to {videoFile.FullName}.txt");
+    }
+
     private static async Task<bool> DownloadVideoAsync(DirectoryInfo outputDirectory, TwitchVideo video)
     {
         Console.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
 
-        var twitchClient = new StreamingTools.Twitch.Twitch(HttpClient);
+        var twitchClient = new Twitch(HttpClient);
 
         FileInfo outputFile = GetOutputFile(video, outputDirectory);
 

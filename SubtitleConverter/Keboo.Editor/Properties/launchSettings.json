@@ -3,6 +3,14 @@
     "List Drafts": {
       "commandName": "Project",
       "commandLineArgs": "youtube drafts"
-    }
+    },
+    "Download New Videos": {
+      "commandName": "Project",
+      "commandLineArgs": "twitch download"
+    },
+    "Do Everything": {
+      "commandName": "Project",
+      "commandLineArgs": "youtube drafts twitch download"
+    },"
   }
 }

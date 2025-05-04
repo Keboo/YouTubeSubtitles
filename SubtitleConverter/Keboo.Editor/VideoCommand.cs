@@ -31,26 +31,31 @@ public class VideoCommand : CliCommand
         {
             FileSystemInfo input = ctx.GetValue<FileSystemInfo>("--input")!;
             FileSystemInfo output = ctx.GetValue<FileSystemInfo>("--output")!;
-            if (input.Attributes.HasFlag(FileAttributes.Directory) &&
-                output.Attributes.HasFlag(FileAttributes.Directory))
-            {
-                Directory.CreateDirectory(output.FullName);
-
-                //Both are directories process
-                foreach (var inputFile in Directory.GetFiles(input.FullName, "*.mp4"))
-                {
-                    var outputFile = Path.ChangeExtension(inputFile, ".trimmed.mp4");
-                    await Ffmpeg.TrimSilenceAsync(new FileInfo(inputFile), new FileInfo(outputFile), log: Console.WriteLine);
-                }
-            }
-            else if (!input.Attributes.HasFlag(FileAttributes.Directory) &&
-                     !output.Attributes.HasFlag(FileAttributes.Directory))
-            {
-                var outputFile = new FileInfo(output.FullName);
-                outputFile.Directory?.Create();
-                //Both are files
-                await Ffmpeg.TrimSilenceAsync(new FileInfo(input.FullName), outputFile, log: Console.WriteLine);
-            }
+            await Trim(input, output);
         });
+    }
+
+    public static async Task Trim(FileSystemInfo input, FileSystemInfo output)
+    {
+        if (input.Attributes.HasFlag(FileAttributes.Directory) &&
+            output.Attributes.HasFlag(FileAttributes.Directory))
+        {
+            Directory.CreateDirectory(output.FullName);
+
+            //Both are directories process
+            foreach (var inputFile in Directory.GetFiles(input.FullName, "*.mp4"))
+            {
+                var outputFile = Path.ChangeExtension(inputFile, ".trimmed.mp4");
+                await Ffmpeg.TrimSilenceAsync(new FileInfo(inputFile), new FileInfo(outputFile), log: Console.WriteLine);
+            }
+        }
+        else if (!input.Attributes.HasFlag(FileAttributes.Directory) &&
+                 !output.Attributes.HasFlag(FileAttributes.Directory))
+        {
+            var outputFile = new FileInfo(output.FullName);
+            outputFile.Directory?.Create();
+            //Both are files
+            await Ffmpeg.TrimSilenceAsync(new FileInfo(input.FullName), outputFile, log: Console.WriteLine);
+        }
     }
 }

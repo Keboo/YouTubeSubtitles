@@ -41,6 +41,10 @@ public static class Config
         }
     }
 
+    public static string TwitchUserId => Configuration["Twitch:UserId"] ?? throw new InvalidOperationException("Twitch User Id is not configured");
+    public static string TwitchClientId => Configuration["Twitch:ClientId"] ?? throw new InvalidOperationException("Twitch Client Id is not configured");
+    public static string TwitchClientSecret => Configuration["Twitch:ClientSecret"] ?? throw new InvalidOperationException("Twitch Client Secret is not configured");
+
     public static string YouTubeClientId => Configuration["YouTube:ClientId"] ?? throw new InvalidOperationException("YouTube Client Id is not configured");
     public static string YouTubeClientSecret => Configuration["YouTube:ClientSecret"] ?? throw new InvalidOperationException("YouTube Client Secret is not configured");
     public static string YouTubeUsername => Configuration["YouTube:Username"] ?? throw new InvalidOperationException("YouTube Username is not configured");
