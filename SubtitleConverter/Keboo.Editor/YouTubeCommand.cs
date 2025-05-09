@@ -43,7 +43,7 @@ public partial class YouTubeCommand : CliCommand
         Add(listingCommand);
         listingCommand.SetAction(async (ctx, ct) =>
         {
-            using var dbContext = await GetDbContextAsync(ct);
+            using var dbContext = await StreamingDbContext.CreateAsync(ct);
             var twitchVideo = await GetVideoAsync(ctx, dbContext, ct);
 
             if (twitchVideo is null)
@@ -72,7 +72,7 @@ public partial class YouTubeCommand : CliCommand
 
     private static async Task<int> GenerateSubtitles(ParseResult ctx, CancellationToken token)
     {
-        using var dbContext = await GetDbContextAsync(token);
+        using var dbContext = await StreamingDbContext.CreateAsync(token);
 
         var service = await YouTubeFactory.GetServiceAsync();
 
@@ -152,13 +152,6 @@ public partial class YouTubeCommand : CliCommand
             }
             return null;
         }
-    }
-
-    private static async Task<StreamingDbContext> GetDbContextAsync(CancellationToken token)
-    {
-        var dbContext = new StreamingDbContext();
-        await dbContext.Database.MigrateAsync(token);
-        return dbContext;
     }
 
     private static async Task<Video?> GetVideoAsync(ParseResult ctx, StreamingDbContext dbContext, CancellationToken token)

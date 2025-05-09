@@ -20,6 +20,14 @@
       "commandName": "Project",
       "commandLineArgs": "youtube listing --twitch-id 2411216335"
     },
+    "List Pending Videos": {
+      "commandName": "Project",
+      "commandLineArgs": "video list-pending"
+    },
+    "Add Subtitles": {
+      "commandName": "Project",
+      "commandLineArgs": "youtube subtitles --id"
+    },
     "Process All": {
       "commandName": "Project",
       "commandLineArgs": "process"

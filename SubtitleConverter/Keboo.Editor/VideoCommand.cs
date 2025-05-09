@@ -1,4 +1,6 @@
-﻿using StreamingTools;
+﻿using Microsoft.EntityFrameworkCore;
+using StreamingTools;
+using StreamingTools.Data;
 using System.CommandLine;
 
 namespace Keboo.Editor;
@@ -33,6 +35,23 @@ public class VideoCommand : CliCommand
             FileSystemInfo output = ctx.GetValue(OutputOption)!;
             await Trim(input, output);
         });
+
+        var listVideosCommand = new CliCommand("list-pending");
+        Add(listVideosCommand);
+        listVideosCommand.SetAction(ListPendingVideos);
+    }
+
+    private static async Task<int> ListPendingVideos(ParseResult ctx, CancellationToken token)
+    {
+        using var dbContext = await StreamingDbContext.CreateAsync(token);
+        await foreach (var video in dbContext.Videos
+            .Where(x => x.SubtitlesUrl == null || x.YouTubeId == null || x.TwitchId == null)
+            .OrderByDescending(x => x.TwitchStartTime).AsAsyncEnumerable())
+        {
+            Console.WriteLine($"Id: {video.Id}, {video.TwitchTitle}, {video.TwitchStartTime} TwitchId: {video.TwitchId}, YouTubeId: {video.YouTubeId}");
+        }
+
+        return 0;
     }
 
     public static async Task Trim(FileSystemInfo input, FileSystemInfo output)

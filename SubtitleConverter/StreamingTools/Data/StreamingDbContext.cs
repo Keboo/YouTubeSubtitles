@@ -13,4 +13,11 @@ public class StreamingDbContext(DbContextOptions<StreamingDbContext> options)
     {
 
     }
+
+    public static async Task<StreamingDbContext> CreateAsync(CancellationToken token)
+    {
+        var dbContext = new StreamingDbContext();
+        await dbContext.Database.EnsureCreatedAsync(token);
+        return dbContext;
+    }
 }
