@@ -26,11 +26,11 @@
     },
     "Update Video": {
       "commandName": "Project",
-      "commandLineArgs": "video update --video-id 22 --youtube-id VpVsa-rjyE0 --subtitle-url https://github.com/Keboo/YouTubeSubtitles/blob/main/Subtitles/2025-02-28-VpVsa-rjyE0.md"
+      "commandLineArgs": "video update --video-id 21 --youtube-id 4fVR_Jiuj_I"
     },
-    "Add Subtitles": {
+    "Generate Subtitles": {
       "commandName": "Project",
-      "commandLineArgs": "youtube subtitles --id"
+      "commandLineArgs": "youtube subtitles --id 21 --output-directory ../../../../../Subtitles"
     },
     "Process All": {
       "commandName": "Project",

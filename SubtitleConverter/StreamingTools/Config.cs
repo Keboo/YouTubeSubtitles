@@ -23,6 +23,14 @@ public static class Config
         {
             configBuilder.AddAzureKeyVault(new Uri("https://streamautomation.vault.azure.net/"), Credential);
         }
+        else
+        {
+            if (Debugger.IsAttached)
+            {
+                Debugger.Break();
+            }
+            Console.WriteLine("Unauthenticated - Can't access KeyVault secrets");
+        }
 
         Configuration = configBuilder.Build();
     }
