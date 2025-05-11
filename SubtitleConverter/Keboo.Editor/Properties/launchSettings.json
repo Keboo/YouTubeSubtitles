@@ -16,13 +16,17 @@
       "commandName": "Project",
       "commandLineArgs": "video trim --input D:\\Temp --output D:\\Temp"
     },
-    "Show Description": {
+    "Show YouTube Listing": {
       "commandName": "Project",
-      "commandLineArgs": "youtube listing --twitch-id 2411216335"
+      "commandLineArgs": "youtube listing --twitch-id 2405210617"
     },
     "List Pending Videos": {
       "commandName": "Project",
       "commandLineArgs": "video list-pending"
+    },
+    "Update Video": {
+      "commandName": "Project",
+      "commandLineArgs": "video update --video-id 22 --youtube-id VpVsa-rjyE0 --subtitle-url https://github.com/Keboo/YouTubeSubtitles/blob/main/Subtitles/2025-02-28-VpVsa-rjyE0.md"
     },
     "Add Subtitles": {
       "commandName": "Project",

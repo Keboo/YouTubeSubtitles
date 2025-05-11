@@ -122,6 +122,10 @@ public static class Description
                 """;
 
         return $"""
+                Id: {video.Id}
+                TwitchId: {video.TwitchId}
+                Twitch Description: {video.TwitchDescription}
+
                 Title:
                 {title}
 

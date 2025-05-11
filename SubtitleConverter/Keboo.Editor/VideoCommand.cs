@@ -7,6 +7,22 @@ namespace Keboo.Editor;
 
 public class VideoCommand : CliCommand
 {
+    private static CliOption<int> VideoIdOption { get; } = new CliOption<int>("--video-id", "-id")
+    {
+        Description = "The video id",
+        Required = true
+    };
+
+    private static CliOption<string?> YouTubeIdOption { get; } = new CliOption<string?>("--youtube-id", "-yt")
+    {
+        Description = "The YouTube id"
+    };
+
+    private static CliOption<string?> SubtitleUrlOption { get; } = new CliOption<string?>("--subtitle-url", "-s")
+    {
+        Description = "The subtitle url"
+    };
+
     private static CliOption<FileSystemInfo> InputOption { get; } = new CliOption<FileSystemInfo>("--input", "-i")
     {
         Description = "An input file or directory",
@@ -39,6 +55,48 @@ public class VideoCommand : CliCommand
         var listVideosCommand = new CliCommand("list-pending");
         Add(listVideosCommand);
         listVideosCommand.SetAction(ListPendingVideos);
+
+        var updateVideo = new CliCommand("update")
+        {
+            VideoIdOption,
+            YouTubeIdOption,
+            SubtitleUrlOption
+        };
+        Add(updateVideo);
+        updateVideo.SetAction(UpdateVideoAsync);
+    }
+
+    private static async Task<int> UpdateVideoAsync(ParseResult ctx, CancellationToken token)
+    {
+        int videoId = ctx.GetValue(VideoIdOption);
+        using var dbContext = await StreamingDbContext.CreateAsync(token);
+
+        Video video = await dbContext.Videos.SingleAsync(x => x.Id == videoId, token);
+
+        if (ctx.GetValue(YouTubeIdOption) is { } youTubeId)
+        {
+            video.YouTubeId = youTubeId;
+        }
+
+        if (ctx.GetValue(SubtitleUrlOption) is { } subtitleUrl)
+        {
+            video.SubtitlesUrl = subtitleUrl;
+        }
+
+        await dbContext.SaveChangesAsync(token);
+
+        Console.WriteLine($"""
+            Updated video
+            ----------------
+            Id: {video.Id}
+            Title: {video.TwitchTitle}
+            TwitchId: {video.TwitchId}
+            YouTubeId: {video.YouTubeId}
+            SubtitlesUrl: {video.SubtitlesUrl}
+            ----------------
+            """);
+
+        return 0;
     }
 
     private static async Task<int> ListPendingVideos(ParseResult ctx, CancellationToken token)
