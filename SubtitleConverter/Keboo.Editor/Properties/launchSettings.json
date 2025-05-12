@@ -4,13 +4,13 @@
       "commandName": "Project",
       "commandLineArgs": "video list-pending"
     },
-    "Update Video": {
-      "commandName": "Project",
-      "commandLineArgs": "video update --video-id 27 --youtube-id n0P0ge8YRwA"
-    },
     "Show YouTube Listing": {
       "commandName": "Project",
-      "commandLineArgs": "youtube listing --video-id 27"
+      "commandLineArgs": "youtube listing --video-id 25"
+    },
+    "Update Video": {
+      "commandName": "Project",
+      "commandLineArgs": "video update --video-id 26 --youtube-id nmVslxViF_4"
     },
     "Generate Subtitles": {
       "commandName": "Project",

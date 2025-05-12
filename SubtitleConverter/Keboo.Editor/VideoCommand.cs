@@ -35,6 +35,11 @@ public class VideoCommand : CliCommand
         Required = true
     };
 
+    private static CliOption<bool> ForceOption { get; } = new CliOption<bool>("--force", "-f")
+    {
+        Description = "Force the operation"
+    };
+
     public VideoCommand()
         : base("video")
     {
@@ -60,7 +65,8 @@ public class VideoCommand : CliCommand
         {
             VideoIdOption,
             YouTubeIdOption,
-            SubtitleUrlOption
+            SubtitleUrlOption,
+            ForceOption
         };
         Add(updateVideo);
         updateVideo.SetAction(UpdateVideoAsync);
@@ -69,17 +75,28 @@ public class VideoCommand : CliCommand
     private static async Task<int> UpdateVideoAsync(ParseResult ctx, CancellationToken token)
     {
         int videoId = ctx.GetValue(VideoIdOption);
+        bool force = ctx.GetValue(ForceOption);
         using var dbContext = await StreamingDbContext.CreateAsync(token);
 
         Video video = await dbContext.Videos.SingleAsync(x => x.Id == videoId, token);
 
         if (ctx.GetValue(YouTubeIdOption) is { } youTubeId)
         {
+            if (!string.IsNullOrWhiteSpace(video.YouTubeId) && !force)
+            {
+                Console.WriteLine($"YouTube Id is already set to {video.YouTubeId}. Use {ForceOption.Name} to overwrite.");
+                return 1;
+            }
             video.YouTubeId = youTubeId;
         }
 
         if (ctx.GetValue(SubtitleUrlOption) is { } subtitleUrl)
         {
+            if (!string.IsNullOrWhiteSpace(video.SubtitlesUrl) && !force)
+            {
+                Console.WriteLine($"Subtitles URL is already set to {video.SubtitlesUrl}. Use {ForceOption.Name} to overwrite.");
+                return 1;
+            }
             video.SubtitlesUrl = subtitleUrl;
         }
 
@@ -107,6 +124,24 @@ public class VideoCommand : CliCommand
             .OrderByDescending(x => x.TwitchStartTime).AsAsyncEnumerable())
         {
             Console.WriteLine($"Id: {video.Id}, {video.TwitchTitle}, {video.TwitchStartTime} TwitchId: {video.TwitchId}, YouTubeId: {video.YouTubeId}");
+
+            if (string.IsNullOrWhiteSpace(video.TwitchId))
+            {
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                Console.WriteLine($"  Twitch Id is not set");
+            }
+            if (string.IsNullOrWhiteSpace(video.YouTubeId))
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"  YouTube Id is not set");
+            }
+            if (string.IsNullOrWhiteSpace(video.SubtitlesUrl))
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"  Subtitles URL is not set");
+            }
+
+            Console.ResetColor();
         }
 
         return 0;
