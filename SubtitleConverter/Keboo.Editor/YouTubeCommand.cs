@@ -14,7 +14,7 @@ public partial class YouTubeCommand : CliCommand
         Description = "An input file"
     }.AcceptExistingOnly();
 
-    private static CliOption<int> VideoIdOption { get; } = new CliOption<int>("--id", "-i")
+    private static CliOption<int> VideoIdOption { get; } = new CliOption<int>("--video-id", "-i")
     {
         Description = "The video id"
     };

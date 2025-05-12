@@ -18,7 +18,7 @@
     },
     "Show YouTube Listing": {
       "commandName": "Project",
-      "commandLineArgs": "youtube listing --twitch-id 2405210617"
+      "commandLineArgs": "youtube listing --video-id 18"
     },
     "List Pending Videos": {
       "commandName": "Project",
@@ -26,11 +26,15 @@
     },
     "Update Video": {
       "commandName": "Project",
-      "commandLineArgs": "video update --video-id 21 --youtube-id 4fVR_Jiuj_I"
+      "commandLineArgs": "video update --video-id 18 --youtube-id 1OZsQ6dPoss"
+    },
+    "Set Video Subtitles Url": {
+      "commandName": "Project",
+      "commandLineArgs": "video update --video-id 20 --subtitle-url https://github.com/Keboo/YouTubeSubtitles/blob/main/Subtitles/2025-02-21-cvsvs7A5AnE.md"
     },
     "Generate Subtitles": {
       "commandName": "Project",
-      "commandLineArgs": "youtube subtitles --id 21 --output-directory ../../../../../Subtitles"
+      "commandLineArgs": "youtube subtitles --video-id 18 --output-directory ../../../../../Subtitles"
     },
     "Process All": {
       "commandName": "Project",
