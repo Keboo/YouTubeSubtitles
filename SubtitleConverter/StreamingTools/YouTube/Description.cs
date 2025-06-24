@@ -6,6 +6,27 @@ public static class Description
 {
     public static string Build(Video video)
     {
+        var (title, description, recordingDate, playlists, tags) = GetDetails(video);
+
+        return $"""
+                Id: {video.Id}
+                TwitchId: {video.TwitchId}
+                Twitch Description: {video.TwitchDescription}
+
+                Title:
+                {title}
+
+                Description:
+                {description}
+
+                Playlists: {string.Join(", ", playlists)}
+                Tags: {string.Join(", ", tags)}
+                Recording Date: {recordingDate:d}
+                """;
+    }
+
+    public static VideoDetails GetDetails(Video video)
+    {
         string? title = video.TwitchTitle;
         string description = video.TwitchDescription ?? string.Empty;
         DateTime recordingDate = video.TwitchStartTime!.Value.DateTime;
@@ -121,20 +142,14 @@ public static class Description
                 Broadcasted live on Twitch -- Watch live at https://twitch.keboo.dev
                 """;
 
-        return $"""
-                Id: {video.Id}
-                TwitchId: {video.TwitchId}
-                Twitch Description: {video.TwitchDescription}
-
-                Title:
-                {title}
-
-                Description:
-                {description}
-
-                Playlists: {string.Join(", ", playlists)}
-                Tags: {string.Join(", ", tags)}
-                Recording Date: {recordingDate:d}
-                """;
+        return new VideoDetails(
+            title ?? "",
+            description,
+            recordingDate,
+            playlists,
+            tags
+        );
     }
 }
+
+public record class VideoDetails(string Title, string Description, DateTime RecordingDate, HashSet<string> Playlists, HashSet<string> Tags);

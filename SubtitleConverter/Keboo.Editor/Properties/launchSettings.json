@@ -8,6 +8,10 @@
       "commandName": "Project",
       "commandLineArgs": "youtube listing --video-id 25"
     },
+    "YouTube Upload": {
+      "commandName": "Project",
+      "commandLineArgs": "youtube upload --video-id 28 --video-directory D:\\Temp"
+    },
     "Update Video": {
       "commandName": "Project",
       "commandLineArgs": "video update --video-id 26 --youtube-id nmVslxViF_4"

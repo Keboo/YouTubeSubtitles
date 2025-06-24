@@ -1,9 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.EntityFrameworkCore;
 using StreamingTools.Data;
 using StreamingTools.Git;
 using StreamingTools.Subtitle;
 using StreamingTools.YouTube;
 using System.CommandLine;
+
+using YouTubeVideo = Google.Apis.YouTube.v3.Data.Video;
+using VideoSnippet = Google.Apis.YouTube.v3.Data.VideoSnippet;
+using VideoStatus = Google.Apis.YouTube.v3.Data.VideoStatus;
+using VideoRecordingDetails = Google.Apis.YouTube.v3.Data.VideoRecordingDetails;
 
 namespace Keboo.Editor;
 
@@ -30,9 +36,14 @@ public partial class YouTubeCommand : CliCommand
         Required = true
     }.AcceptExistingOnly();
 
+    private static CliOption<DirectoryInfo> VideoDirectory { get; } = new CliOption<DirectoryInfo>("--video-directory", "-v")
+    {
+        Description = "The directory containing video files",
+        Required = true
+    }.AcceptExistingOnly();
 
     public YouTubeCommand()
-     : base("youtube")
+        : base("youtube")
     {
         var listingCommand = new CliCommand("listing")
         {
@@ -44,15 +55,15 @@ public partial class YouTubeCommand : CliCommand
         listingCommand.SetAction(async (ctx, ct) =>
         {
             using var dbContext = await StreamingDbContext.CreateAsync(ct);
-            var twitchVideo = await GetVideoAsync(ctx, dbContext, ct);
+            var video = await GetVideoAsync(ctx, dbContext, ct);
 
-            if (twitchVideo is null)
+            if (video is null)
             {
-                Console.WriteLine($"No Twitch video found");
+                Console.WriteLine($"No video found");
                 return 1;
             }
 
-            string description = StreamingTools.YouTube.Description.Build(twitchVideo);
+            string description = StreamingTools.YouTube.Description.Build(video);
 
             Console.WriteLine(description);
 
@@ -68,6 +79,77 @@ public partial class YouTubeCommand : CliCommand
         };
         Add(subtitlesCommand);
         subtitlesCommand.SetAction(GenerateSubtitles);
+
+        var uploadCommand = new CliCommand("upload")
+        {
+            InputFileOption,
+            VideoIdOption,
+            TwitchVideoIdOption,
+            VideoDirectory
+        };
+        Add(uploadCommand);
+        uploadCommand.SetAction(UploadVideo);
+    }
+
+    private static async Task<int> UploadVideo(ParseResult ctx, CancellationToken token)
+    {
+        using var dbContext = await StreamingDbContext.CreateAsync(token);
+        var video = await GetVideoAsync(ctx, dbContext, token);
+
+        if (video is null)
+        {
+            Console.WriteLine($"No video found");
+            return 1;
+        }
+
+        if (video.YouTubeId != null)
+        {
+            Console.WriteLine("Video already has a YouTube ID set");
+            return 0;
+        }
+
+        DirectoryInfo videoDirectory = ctx.GetValue(VideoDirectory)!;
+
+        FileInfo sourceFile = videoDirectory.EnumerateFiles($"*{video.TwitchId}.trimmed.mp4").FirstOrDefault() ??
+            throw new Exception($"Could not find video file for video {video.Id} in output directory {videoDirectory.FullName}");
+
+        var service = await YouTubeFactory.GetServiceAsync();
+
+        var details = StreamingTools.YouTube.Description.GetDetails(video);
+        YouTubeVideo youTubeVideo = new()
+        {
+            Snippet = new VideoSnippet
+            {
+                Title = details.Title,
+                Description = details.Description,
+                Tags = [.. details.Tags],
+                CategoryId = "28", // Science and Technology
+            },
+            Status = new VideoStatus
+            {
+                PrivacyStatus = "unlisted",
+                Embeddable = true,
+                License = "youtube",
+                MadeForKids = false,
+                SelfDeclaredMadeForKids = false,
+            },
+            //RecordingDetails = new VideoRecordingDetails
+            //{
+            //    LocationDescription = "Spokane",
+            //    RecordingDateRaw = video.TwitchStartTime?.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            //}
+        };
+        using var fileStream = sourceFile.OpenRead();
+        var insertRequest = service.Videos.Insert(youTubeVideo, new(["snippet", "status"]), fileStream, "video/*");
+        insertRequest.ResponseReceived += (ytVideo) =>
+        {
+            Console.WriteLine($"YouTube video uploaded: {video.Id}");
+            video.YouTubeId = ytVideo.Id;
+        };
+        var uploadResult = await insertRequest.UploadAsync(token);
+
+        await dbContext.SaveChangesAsync(token);
+        return 0;
     }
 
     private static async Task<int> GenerateSubtitles(ParseResult ctx, CancellationToken token)
