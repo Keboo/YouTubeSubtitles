@@ -21,33 +21,19 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.x
+    
     - name: Setup FFmpeg
       uses: FedericoCarboni/setup-ffmpeg@v3
+
     - name: dotnet build
       run: |
-        dotnet build VideoConverter/VideoConverter.csproj
-    - name: Install Playwright
-      run: |
-        dotnet tool install --global Microsoft.Playwright.CLI
-        playwright -p VideoConverter/VideoConverter.csproj install chromium
+        dotnet build Keboo.Editor/Keboo.Editor.csproj
+    
     - name: Run
-      run: dotnet run --no-build --project VideoConverter/VideoConverter.csproj -- 
-        --twitch-user-id '${{ secrets.TWITCH_USER_ID }}'
-        --twitch-client-id '${{ secrets.TWITCH_CLIENT_ID }}'
-        --twitch-client-secret '${{ secrets.TWITCH_CLIENT_SECRET }}'
-        --twitch-video-id '${{ inputs.video-id }}'
-        --azure-storage-account-key '${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}'
-        --you-tube-username '${{ secrets.YOUTUBE_USERNAME }}'
-        --you-tube-password '${{ secrets.YOUTUBE_PASSWORD }}'
-        --you-tube-recovery-email '${{ secrets.YOUTUBE_RECOVERYEMAIL }}'
-        --you-tube-two-factor-callback-url '${{ secrets.YOUTUBE_2FACTORCALLBACKURL }}'
-    - name: Upload State
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: UI Artifacts
-        path: ${{ github.workspace }}/**/Data
+      run: dotnet run --no-build --project Keboo.Editor/Keboo.Editor.csproj -- 
+        process
