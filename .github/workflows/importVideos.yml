@@ -30,12 +30,12 @@ jobs:
     - name: Setup FFmpeg
       uses: FedericoCarboni/setup-ffmpeg@v3
 
-    - name: dotnet build
+    - name: dotnet publish
       run: |
         dotnet publish -o publish .\Keboo.Editor\Keboo.Editor.csproj
 
     - name: Azure Login
-      uses: azure/login@v1
+      uses: azure/login@v2
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
