@@ -14,7 +14,6 @@ public class Program
 
     public static Task<int> Main(string[] args)
     {
-        Console.Clear();
         CliCommand processAll = new("process")
         {
             TempDirectory
