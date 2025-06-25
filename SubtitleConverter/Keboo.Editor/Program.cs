@@ -5,10 +5,20 @@ namespace Keboo.Editor;
 
 public class Program
 {
+    private static CliOption<DirectoryInfo> TempDirectory { get; } = new CliOption<DirectoryInfo>("--working-directory", "-o")
+    {
+        Description = "The working directory",
+        Required = true,
+        DefaultValueFactory = _ => new DirectoryInfo(@"D:\Temp")
+    };
+
     public static Task<int> Main(string[] args)
     {
         Console.Clear();
-        CliCommand processAll = new("process");
+        CliCommand processAll = new("process")
+        {
+            TempDirectory
+        };
         processAll.SetAction(ProcessAll);
 
         CliRootCommand rootCommand =
@@ -24,9 +34,11 @@ public class Program
 
     private static async Task<int> ProcessAll(ParseResult ctx, CancellationToken token)
     {
-        DirectoryInfo output = new(@"D:\Temp");
+        DirectoryInfo output = ctx.GetValue(TempDirectory)!;
         await TwitchCommand.DownloadNewVideos(Config.TwitchClientId, Config.TwitchClientSecret, Config.TwitchUserId, output);
         await VideoCommand.Trim(output, output);
+        await YouTubeCommand.UploadVideosAsync(output, token);
+
         return 0;
     }
 }

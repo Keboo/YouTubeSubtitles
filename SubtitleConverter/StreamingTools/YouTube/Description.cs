@@ -29,7 +29,7 @@ public static class Description
     {
         string? title = video.TwitchTitle;
         string description = video.TwitchDescription ?? string.Empty;
-        DateTime recordingDate = video.TwitchStartTime!.Value.DateTime;
+        DateTime recordingDate = video.TwitchStartTime?.DateTime ?? DateTime.Now;
         HashSet<string> playlists =
         [
             "C# Programming"

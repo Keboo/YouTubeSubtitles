@@ -109,10 +109,38 @@ public partial class YouTubeCommand : CliCommand
         }
 
         DirectoryInfo videoDirectory = ctx.GetValue(VideoDirectory)!;
-
         FileInfo sourceFile = videoDirectory.EnumerateFiles($"*{video.TwitchId}.trimmed.mp4").FirstOrDefault() ??
             throw new Exception($"Could not find video file for video {video.Id} in output directory {videoDirectory.FullName}");
 
+        if (await UploadAsync(video, sourceFile, token))
+        {
+            await dbContext.SaveChangesAsync(token);
+            return 0;
+        }
+        return 1;
+    }
+
+    public static async Task UploadVideosAsync(DirectoryInfo videoDirectory, CancellationToken token)
+    {
+        using var dbContext = await StreamingDbContext.CreateAsync(token);
+
+        foreach(var video in dbContext.Videos.Where(x => x.YouTubeId == null))
+        {
+            FileInfo? sourceFile = videoDirectory.EnumerateFiles($"*{video.TwitchId}.trimmed.mp4").FirstOrDefault();
+            if (sourceFile is null)
+            {
+                Console.WriteLine($"Could not find video file for video {video.Id} in output directory {videoDirectory.FullName}");
+                continue;
+            }
+            if (await UploadAsync(video, sourceFile, token))
+            {
+                await dbContext.SaveChangesAsync(token);
+            }
+        }
+    }
+
+    public static async Task<bool> UploadAsync(Video video, FileInfo sourceFile, CancellationToken token)
+    {
         var service = await YouTubeFactory.GetServiceAsync();
 
         var details = StreamingTools.YouTube.Description.GetDetails(video);
@@ -123,7 +151,7 @@ public partial class YouTubeCommand : CliCommand
                 Title = details.Title,
                 Description = details.Description,
                 Tags = [.. details.Tags],
-                CategoryId = "28", // Science and Technology
+                CategoryId = "28", // Science and Technology,
             },
             Status = new VideoStatus
             {
@@ -133,23 +161,53 @@ public partial class YouTubeCommand : CliCommand
                 MadeForKids = false,
                 SelfDeclaredMadeForKids = false,
             },
-            //RecordingDetails = new VideoRecordingDetails
-            //{
-            //    LocationDescription = "Spokane",
-            //    RecordingDateRaw = video.TwitchStartTime?.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-            //}
+            RecordingDetails = new VideoRecordingDetails
+            {
+                LocationDescription = "Spokane",
+                RecordingDateRaw = details.RecordingDate.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            }
         };
         using var fileStream = sourceFile.OpenRead();
-        var insertRequest = service.Videos.Insert(youTubeVideo, new(["snippet", "status"]), fileStream, "video/*");
+        var insertRequest = service.Videos.Insert(youTubeVideo, new(["snippet", "status", "recording_details"]), fileStream, "video/*");
+        bool success = false;
         insertRequest.ResponseReceived += (ytVideo) =>
         {
             Console.WriteLine($"YouTube video uploaded: {video.Id}");
             video.YouTubeId = ytVideo.Id;
+            success = true;
         };
         var uploadResult = await insertRequest.UploadAsync(token);
 
-        await dbContext.SaveChangesAsync(token);
-        return 0;
+        if (success)
+        {
+            var playlistListRequest = service.Playlists.List("snippet");
+            playlistListRequest.Mine = true;
+            playlistListRequest.MaxResults = 100;
+            var playlists = await playlistListRequest.ExecuteAsync(token);
+            foreach (var playlistName in details.Playlists)
+            {
+                var playlist = playlists.Items.FirstOrDefault(x => x.Snippet.Title == playlistName);
+                if (playlist != null)
+                {
+                    var playlistItem = new Google.Apis.YouTube.v3.Data.PlaylistItem
+                    {
+                        Snippet = new Google.Apis.YouTube.v3.Data.PlaylistItemSnippet
+                        {
+                            PlaylistId = playlist.Id,
+                            ResourceId = new Google.Apis.YouTube.v3.Data.ResourceId
+                            {
+                                Kind = "youtube#video",
+                                VideoId = video.YouTubeId
+                            }
+                        }
+                    };
+
+                    var playlistInsertRequest = service.PlaylistItems.Insert(playlistItem, "snippet");
+                    await playlistInsertRequest.ExecuteAsync(token);
+                }
+            }
+        }
+        return success;
     }
 
     private static async Task<int> GenerateSubtitles(ParseResult ctx, CancellationToken token)
