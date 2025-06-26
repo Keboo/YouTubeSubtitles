@@ -2,4 +2,4 @@
 
 namespace Keboo.Editor;
 
-public record VideoData(Video Video, FileInfo DownloadedFile, FileInfo? TrimmedFile);
+public record VideoData(int VideoId, FileInfo DownloadedFile, FileInfo? TrimmedFile);

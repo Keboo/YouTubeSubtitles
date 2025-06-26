@@ -47,7 +47,7 @@ public class Program
                 FileInfo outputFile = new(Path.ChangeExtension(video.DownloadedFile.FullName, ".trimmed.mp4"));
                 if (await VideoCommand.Trim(video.DownloadedFile, outputFile))
                 {
-                    await YouTubeCommand.UploadVideoAsync(outputFile, video.Video, token);
+                    await YouTubeCommand.UploadVideoAsync(outputFile, video.VideoId, token);
                 }
                 output.Refresh();
                 if (output.Exists)

@@ -160,7 +160,7 @@ public class TwitchCommand : CliCommand
                 continue;
             }
 
-            return new VideoData(dbVideo, downloadedFile, null);
+            return new VideoData(dbVideo.Id, downloadedFile, null);
         }
         return null;
     }

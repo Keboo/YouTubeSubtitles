@@ -120,9 +120,12 @@ public partial class YouTubeCommand : CliCommand
         return 1;
     }
 
-    public static async Task UploadVideoAsync(FileInfo sourceFile, Video video, CancellationToken token)
+    public static async Task UploadVideoAsync(FileInfo sourceFile, int videoId, CancellationToken token)
     {
         using var dbContext = await StreamingDbContext.CreateAsync(token);
+
+        //Refresh from database and update to the new context
+        var video = await dbContext.Videos.SingleAsync(x => x.Id == videoId, token);
 
         if (video.YouTubeId != null)
         {
@@ -142,6 +145,7 @@ public partial class YouTubeCommand : CliCommand
 
     public static async Task<bool> UploadAsync(Video video, FileInfo sourceFile, CancellationToken token)
     {
+        Console.WriteLine($"Uploading video {video.Id} to YouTube ({sourceFile.FullName})");
         var service = await YouTubeFactory.GetServiceAsync();
 
         var details = StreamingTools.YouTube.Description.GetDetails(video);
@@ -181,6 +185,7 @@ public partial class YouTubeCommand : CliCommand
 
         if (success)
         {
+            Console.WriteLine($"Video {video.Id} uploaded successfully with YouTube ID: {video.YouTubeId}, adding to playlists");
             var playlistListRequest = service.Playlists.List("snippet");
             playlistListRequest.Mine = true;
             playlistListRequest.MaxResults = 100;
@@ -207,6 +212,11 @@ public partial class YouTubeCommand : CliCommand
                     await playlistInsertRequest.ExecuteAsync(token);
                 }
             }
+            Console.WriteLine($"Video {video.Id} added to playlists: {string.Join(", ", details.Playlists)}");
+        }
+        else
+        {
+            Console.WriteLine($"Failed to upload video {video.Id} to YouTube");
         }
         return success;
     }
