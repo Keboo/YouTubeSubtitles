@@ -141,9 +141,16 @@ public class TwitchCommand : CliCommand
         foreach (TwitchVideo video in videoResponse.Videos)
         {
             var dbVideo = await dbContext.Videos.FirstOrDefaultAsync(x => x.TwitchId == video.Id);
-            if (dbVideo is not null)
+            if (dbVideo is null)
             {
-                Console.WriteLine($"Video {video.Id} already exists in the database");
+                dbVideo = GetDbVideo(video);
+                dbContext.Videos.Add(dbVideo);
+                await dbContext.SaveChangesAsync();
+            }
+
+            if (dbVideo.YouTubeId is not null)
+            {
+                Console.WriteLine($"Video {video.Id} already exists in the database with YouTube ID {dbVideo.YouTubeId} skipping download.");
                 continue;
             }
 
@@ -152,10 +159,6 @@ public class TwitchCommand : CliCommand
             {
                 continue;
             }
-
-            dbVideo = GetDbVideo(video);
-            dbContext.Videos.Add(dbVideo);
-            await dbContext.SaveChangesAsync();
 
             return new VideoData(dbVideo, downloadedFile, null);
         }
@@ -251,6 +254,12 @@ public class TwitchCommand : CliCommand
         var twitchClient = new Twitch(HttpClient);
 
         FileInfo outputFile = GetOutputFile(video, outputDirectory);
+
+        if (outputFile.Exists)
+        {
+            Console.WriteLine($"Video file {outputFile.FullName} already exists, skipping download.");
+            return outputFile;
+        }
 
         if (!await twitchClient.DownloadVideoFileAsync(video.Id, outputFile))
         {
