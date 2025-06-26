@@ -147,13 +147,14 @@ public class VideoCommand : CliCommand
         return 0;
     }
 
-    public static async Task Trim(FileSystemInfo input, FileSystemInfo output)
+    public static async Task<bool> Trim(FileSystemInfo input, FileSystemInfo output)
     {
         if (input.Attributes.HasFlag(FileAttributes.Directory) &&
             output.Attributes.HasFlag(FileAttributes.Directory))
         {
             Directory.CreateDirectory(output.FullName);
 
+            bool rv = true;
             //Both are directories process
             foreach (var inputFile in Directory.GetFiles(input.FullName, "*.mp4"))
             {
@@ -168,8 +169,9 @@ public class VideoCommand : CliCommand
                     Console.WriteLine($"Skipping {inputFile} => {outputFile} already exists");
                     continue;
                 }
-                await Ffmpeg.TrimSilenceAsync(new FileInfo(inputFile), new FileInfo(outputFile), log: Console.WriteLine);
+                rv &= await Ffmpeg.TrimSilenceAsync(new FileInfo(inputFile), new FileInfo(outputFile), log: Console.WriteLine);
             }
+            return rv;
         }
         else if (!input.Attributes.HasFlag(FileAttributes.Directory) &&
                  !output.Attributes.HasFlag(FileAttributes.Directory))
@@ -177,7 +179,8 @@ public class VideoCommand : CliCommand
             var outputFile = new FileInfo(output.FullName);
             outputFile.Directory?.Create();
             //Both are files
-            await Ffmpeg.TrimSilenceAsync(new FileInfo(input.FullName), outputFile, log: Console.WriteLine);
+            return await Ffmpeg.TrimSilenceAsync(new FileInfo(input.FullName), outputFile, log: Console.WriteLine);
         }
+        return false;
     }
 }

@@ -34,12 +34,25 @@ public class Program
     private static async Task<int> ProcessAll(ParseResult ctx, CancellationToken token)
     {
         DirectoryInfo output = ctx.GetValue(TempDirectory)!;
-        output.Create();
 
-        await TwitchCommand.DownloadNewVideos(Config.TwitchClientId, Config.TwitchClientSecret, Config.TwitchUserId, output);
-        await VideoCommand.Trim(output, output);
-        await YouTubeCommand.UploadVideosAsync(output, token);
+        VideoData? video;
+        do
+        {
+            output.Delete(true);
+            output.Create();
+            
+            video = await TwitchCommand.DownloadNewVideo(Config.TwitchClientId, Config.TwitchClientSecret, Config.TwitchUserId, output);
 
+            if (video is not null)
+            {
+                FileInfo outputFile = new(Path.ChangeExtension(video.DownloadedFile.FullName, ".trimmed.mp4"));
+                if (await VideoCommand.Trim(video.DownloadedFile, outputFile))
+                {
+                    await YouTubeCommand.UploadVideoAsync(outputFile, video.Video, token);
+                }
+            }
+        }
+        while (video is not null);
         return 0;
     }
 }

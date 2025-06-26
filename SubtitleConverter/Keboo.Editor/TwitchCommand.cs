@@ -104,7 +104,8 @@ public class TwitchCommand : CliCommand
                 continue;
             }
 
-            if (!await DownloadVideoAsync(outputDirectory, video))
+            FileInfo? downloadedFile = await DownloadVideoAsync(outputDirectory, video);
+            if (downloadedFile is null)
             {
                 continue;
             }
@@ -115,6 +116,50 @@ public class TwitchCommand : CliCommand
 
             await WriteVideoDescriptionAsync(dbVideo, GetOutputFile(video, outputDirectory));
         }
+    }
+
+    public static async Task<VideoData?> DownloadNewVideo(string clientId,
+        string clientSecret, string userId, DirectoryInfo outputDirectory)
+    {
+        TwitchAPI api = new(settings: new ApiSettings()
+        {
+            ClientId = clientId,
+            Secret = clientSecret,
+        });
+
+        Console.WriteLine("Retrieving new videos from twitch");
+        var videoResponse = await api.Helix.Videos.GetVideosAsync(userId: userId);
+
+        if (videoResponse.Videos.Length == 0)
+        {
+            Console.WriteLine($"Could not find videos for user id {userId}");
+            return null;
+        }
+
+        using StreamingDbContext dbContext = await GetDbContextAsync();
+
+        foreach (TwitchVideo video in videoResponse.Videos)
+        {
+            var dbVideo = await dbContext.Videos.FirstOrDefaultAsync(x => x.TwitchId == video.Id);
+            if (dbVideo is not null)
+            {
+                Console.WriteLine($"Video {video.Id} already exists in the database");
+                continue;
+            }
+
+            FileInfo? downloadedFile = await DownloadVideoAsync(outputDirectory, video);
+            if (downloadedFile is null)
+            {
+                continue;
+            }
+
+            dbVideo = GetDbVideo(video);
+            dbContext.Videos.Add(dbVideo);
+            await dbContext.SaveChangesAsync();
+
+            return new VideoData(dbVideo, downloadedFile, null);
+        }
+        return null;
     }
 
     private static async Task DownloadSingleAsync(string clientId,
@@ -141,7 +186,8 @@ public class TwitchCommand : CliCommand
 
         foreach (TwitchVideo video in videoResponse.Videos)
         {
-            if (!await DownloadVideoAsync(outputDirectory, video))
+            FileInfo? downloadedFile = await DownloadVideoAsync(outputDirectory, video);
+            if (downloadedFile is null)
             {
                 continue;
             }
@@ -198,7 +244,7 @@ public class TwitchCommand : CliCommand
         Console.WriteLine($"Wrote video description to {videoFile.FullName}.txt");
     }
 
-    private static async Task<bool> DownloadVideoAsync(DirectoryInfo outputDirectory, TwitchVideo video)
+    private static async Task<FileInfo?> DownloadVideoAsync(DirectoryInfo outputDirectory, TwitchVideo video)
     {
         Console.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
 
@@ -209,11 +255,11 @@ public class TwitchCommand : CliCommand
         if (!await twitchClient.DownloadVideoFileAsync(video.Id, outputFile))
         {
             Console.WriteLine($"Failed to download video file");
-            return false;
+            return null;
         }
 
         Console.WriteLine($"Downloaded video file to {outputFile.FullName}");
-        return true;
+        return outputFile;
     }
 
 

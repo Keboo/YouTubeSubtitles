@@ -5,11 +5,11 @@ using StreamingTools.Git;
 using StreamingTools.Subtitle;
 using StreamingTools.YouTube;
 using System.CommandLine;
-
-using YouTubeVideo = Google.Apis.YouTube.v3.Data.Video;
+using System.Diagnostics;
+using VideoRecordingDetails = Google.Apis.YouTube.v3.Data.VideoRecordingDetails;
 using VideoSnippet = Google.Apis.YouTube.v3.Data.VideoSnippet;
 using VideoStatus = Google.Apis.YouTube.v3.Data.VideoStatus;
-using VideoRecordingDetails = Google.Apis.YouTube.v3.Data.VideoRecordingDetails;
+using YouTubeVideo = Google.Apis.YouTube.v3.Data.Video;
 
 namespace Keboo.Editor;
 
@@ -120,22 +120,23 @@ public partial class YouTubeCommand : CliCommand
         return 1;
     }
 
-    public static async Task UploadVideosAsync(DirectoryInfo videoDirectory, CancellationToken token)
+    public static async Task UploadVideoAsync(FileInfo sourceFile, Video video, CancellationToken token)
     {
         using var dbContext = await StreamingDbContext.CreateAsync(token);
 
-        foreach(var video in dbContext.Videos.Where(x => x.YouTubeId == null))
+        if (video.YouTubeId != null)
         {
-            FileInfo? sourceFile = videoDirectory.EnumerateFiles($"*{video.TwitchId}.trimmed.mp4").FirstOrDefault();
-            if (sourceFile is null)
-            {
-                Console.WriteLine($"Could not find video file for video {video.Id} in output directory {videoDirectory.FullName}");
-                continue;
-            }
-            if (await UploadAsync(video, sourceFile, token))
-            {
-                await dbContext.SaveChangesAsync(token);
-            }
+            Console.WriteLine($"Video {video.Id} already has a YouTube ID set: {video.YouTubeId}");
+            return;
+        }
+        if (sourceFile is null || !sourceFile.Exists)
+        {
+            Console.WriteLine($"Source file {sourceFile?.FullName} does not exist for video {video.Id}");
+            return;
+        }
+        if (await UploadAsync(video, sourceFile, token))
+        {
+            await dbContext.SaveChangesAsync(token);
         }
     }
 
