@@ -149,14 +149,13 @@ public class VideoCommand : CliCommand
 
     public static async Task<bool> Trim(FileSystemInfo input, FileSystemInfo output)
     {
-        if (input.Attributes.HasFlag(FileAttributes.Directory) &&
-            output.Attributes.HasFlag(FileAttributes.Directory))
+        if (Directory.Exists(input.FullName))
         {
             Directory.CreateDirectory(output.FullName);
 
             bool rv = true;
             //Both are directories process
-            foreach (var inputFile in Directory.GetFiles(input.FullName, "*.mp4"))
+            foreach (var inputFile in Directory.EnumerateFiles(input.FullName, "*.mp4"))
             {
                 if (inputFile.EndsWith(".trimmed.mp4", StringComparison.OrdinalIgnoreCase))
                 {
@@ -173,8 +172,7 @@ public class VideoCommand : CliCommand
             }
             return rv;
         }
-        else if (!input.Attributes.HasFlag(FileAttributes.Directory) &&
-                 !output.Attributes.HasFlag(FileAttributes.Directory))
+        else if (File.Exists(input.FullName))
         {
             var outputFile = new FileInfo(output.FullName);
             outputFile.Directory?.Create();

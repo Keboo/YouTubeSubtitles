@@ -38,11 +38,6 @@ public class Program
         VideoData? video;
         do
         {
-            output.Refresh();
-            if (output.Exists)
-            {
-                output.Delete(true);
-            }
             output.Create();
             
             video = await TwitchCommand.DownloadNewVideo(Config.TwitchClientId, Config.TwitchClientSecret, Config.TwitchUserId, output);
@@ -53,6 +48,11 @@ public class Program
                 if (await VideoCommand.Trim(video.DownloadedFile, outputFile))
                 {
                     await YouTubeCommand.UploadVideoAsync(outputFile, video.Video, token);
+                }
+                output.Refresh();
+                if (output.Exists)
+                {
+                    output.Delete(true);
                 }
             }
         }
