@@ -34,6 +34,8 @@ public class Program
     private static async Task<int> ProcessAll(ParseResult ctx, CancellationToken token)
     {
         DirectoryInfo output = ctx.GetValue(TempDirectory)!;
+        output.Create();
+
         await TwitchCommand.DownloadNewVideos(Config.TwitchClientId, Config.TwitchClientSecret, Config.TwitchUserId, output);
         await VideoCommand.Trim(output, output);
         await YouTubeCommand.UploadVideosAsync(output, token);

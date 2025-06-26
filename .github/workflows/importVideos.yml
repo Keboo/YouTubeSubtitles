@@ -46,4 +46,4 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     
     - name: Run
-      run: ./publish/Keboo.Editor.exe process
+      run: ./publish/Keboo.Editor.exe process --working-directory ./temp
