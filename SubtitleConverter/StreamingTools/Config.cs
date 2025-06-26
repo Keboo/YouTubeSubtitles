@@ -8,10 +8,7 @@ public static class Config
 {
     private static IConfiguration Configuration { get; }
 
-    public static TokenCredential Credential { get; } = new ChainedTokenCredential(
-        new AzureCliCredential(),
-        new EnvironmentCredential()
-    );
+    public static TokenCredential Credential { get; } = new DefaultAzureCredential();
 
     static Config()
     {
