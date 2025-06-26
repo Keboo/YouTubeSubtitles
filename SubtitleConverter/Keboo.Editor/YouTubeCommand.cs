@@ -120,7 +120,7 @@ public partial class YouTubeCommand : CliCommand
         return 1;
     }
 
-    public static async Task UploadVideoAsync(FileInfo sourceFile, int videoId, CancellationToken token)
+    public static async Task<bool?> UploadVideoAsync(FileInfo sourceFile, int videoId, CancellationToken token)
     {
         using var dbContext = await StreamingDbContext.CreateAsync(token);
 
@@ -130,17 +130,19 @@ public partial class YouTubeCommand : CliCommand
         if (video.YouTubeId != null)
         {
             Console.WriteLine($"Video {video.Id} already has a YouTube ID set: {video.YouTubeId}");
-            return;
+            return null;
         }
         if (sourceFile is null || !sourceFile.Exists)
         {
             Console.WriteLine($"Source file {sourceFile?.FullName} does not exist for video {video.Id}");
-            return;
+            return false;
         }
         if (await UploadAsync(video, sourceFile, token))
         {
             await dbContext.SaveChangesAsync(token);
+            return true;
         }
+        return false;
     }
 
     public static async Task<bool> UploadAsync(Video video, FileInfo sourceFile, CancellationToken token)
@@ -180,6 +182,20 @@ public partial class YouTubeCommand : CliCommand
             Console.WriteLine($"YouTube video uploaded: {video.Id}");
             video.YouTubeId = ytVideo.Id;
             success = true;
+        };
+        Google.Apis.Upload.UploadStatus lastStatus = Google.Apis.Upload.UploadStatus.NotStarted;
+        insertRequest.ProgressChanged += (Google.Apis.Upload.IUploadProgress obj) =>
+        {
+            if (obj.Status != lastStatus)
+            {
+                lastStatus = obj.Status;
+                Console.WriteLine($"Upload status => {obj.Status}");
+            }
+
+            if(obj.Status == Google.Apis.Upload.UploadStatus.Failed)
+            {
+                Console.WriteLine($"Failed to upload: {obj.Exception}");
+            }
         };
         var uploadResult = await insertRequest.UploadAsync(token);
 

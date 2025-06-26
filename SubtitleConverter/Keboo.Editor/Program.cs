@@ -49,7 +49,11 @@ public class Program
                 {
                     await YouTubeCommand.UploadVideoAsync(outputFile, video.VideoId, token);
                 }
-                output.Refresh();
+                else
+                {
+                    return 1;
+                }
+                    output.Refresh();
                 if (output.Exists)
                 {
                     output.Delete(true);
