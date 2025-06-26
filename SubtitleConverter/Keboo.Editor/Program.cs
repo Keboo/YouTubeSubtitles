@@ -38,7 +38,11 @@ public class Program
         VideoData? video;
         do
         {
-            output.Delete(true);
+            output.Refresh();
+            if (output.Exists)
+            {
+                output.Delete(true);
+            }
             output.Create();
             
             video = await TwitchCommand.DownloadNewVideo(Config.TwitchClientId, Config.TwitchClientSecret, Config.TwitchUserId, output);
