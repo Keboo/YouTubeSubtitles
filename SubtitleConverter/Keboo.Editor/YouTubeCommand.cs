@@ -244,8 +244,6 @@ public partial class YouTubeCommand : CliCommand
         return success;
     }
 
-
-
     private static async Task<int> GenerateSubtitles(ParseResult ctx, CancellationToken token)
     {
         using var dbContext = await StreamingDbContext.CreateAsync(token);
@@ -262,10 +260,10 @@ public partial class YouTubeCommand : CliCommand
                 Console.WriteLine($"Video {video.Id} does not have a YouTube Id");
                 continue;
             }
-
+            Console.WriteLine($"Generating subtitles for video {video.Id} (YouTube ID: {video.YouTubeId})");
             int videoResult = await GenerateSubtitlesForVideoAsync(video, service, dbContext, outputDirectory, token);
             result += videoResult;
-            if (result != 0)
+            if (videoResult != 0)
             {
                 Console.WriteLine($"Failed to generate subtitles for video {video.Id} (YouTube ID: {video.YouTubeId})");
             }
