@@ -10,6 +10,10 @@ on:
   schedule:
   - cron: '0 16 * * *'
 
+defaults:
+  run:
+    working-directory: SubtitleConverter
+
 jobs:
   build:
 
