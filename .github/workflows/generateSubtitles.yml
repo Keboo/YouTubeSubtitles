@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       video-id:
-        description: 'The YouTube video id to process'
+        description: 'The video id to process'
         required: false
         default: ''
   schedule:
@@ -45,7 +45,14 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     
     - name: Run
+      if: ${{ inputs.video-id != '' }}
+      run: ./publish/Keboo.Editor.exe youtube subtitles --video-id ${{ inputs.video-id }} --output-directory ../Subtitles
+      continue-on-error: true
+
+    - name: Run
+      if: ${{ inputs.video-id == '' }}
       run: ./publish/Keboo.Editor.exe youtube subtitles --all --output-directory ../Subtitles
+      continue-on-error: true
       
     - name: Commit & Push changes
       uses: actions-js/push@master

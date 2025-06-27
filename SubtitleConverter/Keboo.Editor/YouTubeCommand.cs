@@ -6,7 +6,6 @@ using StreamingTools.Git;
 using StreamingTools.Subtitle;
 using StreamingTools.YouTube;
 using System.CommandLine;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using VideoRecordingDetails = Google.Apis.YouTube.v3.Data.VideoRecordingDetails;
 using VideoSnippet = Google.Apis.YouTube.v3.Data.VideoSnippet;
@@ -301,7 +300,7 @@ public partial class YouTubeCommand : CliCommand
                 if (videoResponse.Items is { Count: > 0 } videos &&
                     videos[0] is { } youTubeVideo &&
                     youTubeVideo.Snippet?.Description is { } description &&
-                    description.Contains(video.SubtitlesUrl) != true)
+                    !description.Contains(video.SubtitlesUrl))
                 {
                     Console.WriteLine($"Updating video {video.Id} description");
                     description +=
