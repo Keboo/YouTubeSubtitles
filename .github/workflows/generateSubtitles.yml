@@ -45,7 +45,7 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     
     - name: Run
-      run: ./publish/Keboo.Editor.exe youtube subtitles --all --output-directory ../../../../../Subtitles
+      run: ./publish/Keboo.Editor.exe youtube subtitles --all --output-directory ../../Subtitles
       
     - name: Commit & Push changes
       uses: actions-js/push@master
