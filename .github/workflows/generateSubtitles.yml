@@ -24,13 +24,21 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.x
+
+    - name: dotnet publish
+      run: |
+        dotnet publish -o publish .\Keboo.Editor\Keboo.Editor.csproj
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+    
     - name: Run
-      run: dotnet run --project SubtitleConverter\SubtitleConverter\SubtitleConverter.csproj -- 
-        --output-directory './Subtitles'
-        --azure-storage-account-key '${{ secrets.AZURE_STORAGE_ACCOUNT_KEY }}'
-        --you-tube-client-id '${{ secrets.YOUTUBE_CLIENT_ID }}'
-        --you-tube-client-secret '${{ secrets.YOUTUBE_CLIENT_SECRET }}'
-        --you-tube-video-id '${{ github.event.inputs.video-id }}'
+      run: ./publish/Keboo.Editor.exe youtube subtitles --all --output-directory ../../../../../Subtitles
+      
     - name: Commit & Push changes
       uses: actions-js/push@master
       with:

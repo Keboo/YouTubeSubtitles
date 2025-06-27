@@ -1,11 +1,13 @@
 ﻿
+using Google.Apis.YouTube.v3;
 using Microsoft.EntityFrameworkCore;
 using StreamingTools.Data;
 using StreamingTools.Git;
 using StreamingTools.Subtitle;
 using StreamingTools.YouTube;
 using System.CommandLine;
-using System.Diagnostics;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 using VideoRecordingDetails = Google.Apis.YouTube.v3.Data.VideoRecordingDetails;
 using VideoSnippet = Google.Apis.YouTube.v3.Data.VideoSnippet;
 using VideoStatus = Google.Apis.YouTube.v3.Data.VideoStatus;
@@ -42,6 +44,11 @@ public partial class YouTubeCommand : CliCommand
         Required = true
     }.AcceptExistingOnly();
 
+    private static CliOption<bool> All { get; } = new CliOption<bool>("--all", "-a")
+    {
+        Description = "Indicates if all videos should be processed",
+    };
+
     public YouTubeCommand()
         : base("youtube")
     {
@@ -75,6 +82,7 @@ public partial class YouTubeCommand : CliCommand
             InputFileOption,
             VideoIdOption,
             TwitchVideoIdOption,
+            All,
             OutputDirectory
         };
         Add(subtitlesCommand);
@@ -192,7 +200,7 @@ public partial class YouTubeCommand : CliCommand
                 Console.WriteLine($"Upload status => {obj.Status}");
             }
 
-            if(obj.Status == Google.Apis.Upload.UploadStatus.Failed)
+            if (obj.Status == Google.Apis.Upload.UploadStatus.Failed)
             {
                 Console.WriteLine($"Failed to upload: {obj.Exception}");
             }
@@ -237,65 +245,103 @@ public partial class YouTubeCommand : CliCommand
         return success;
     }
 
+
+
     private static async Task<int> GenerateSubtitles(ParseResult ctx, CancellationToken token)
     {
         using var dbContext = await StreamingDbContext.CreateAsync(token);
 
         var service = await YouTubeFactory.GetServiceAsync();
+        DirectoryInfo outputDirectory = ctx.GetValue(OutputDirectory)!;
 
-        Video? video = await GetVideoAsync(ctx, dbContext, token);
 
-        if (string.IsNullOrWhiteSpace(video?.YouTubeId))
+        int result = 0;
+        await foreach(var video in GetVideos(ctx, dbContext).WithCancellation(token))
         {
-            Console.WriteLine("Could not find YouTube video id");
-            return 1;
-        }
-
-        DateTime publishedAt = video.TwitchStartTime?.Date ?? DateTime.Today;
-        Uri? markdownUri = await GetMarkdownUrl(video, publishedAt, token);
-        if (markdownUri is null)
-        {
-            Console.WriteLine($"Could not get markdown url for video (ID: {video.Id})");
-            return 1;
-        }
-
-        if (await service.GetSrtSubtitles(video.YouTubeId, token) is { Length: > 0 } subtitles)
-        {
-            Console.WriteLine("  Got subtitles");
-            string markdown = Subtitles.ConvertSrtToMarkdown(video.YouTubeId, subtitles);
-            DirectoryInfo outputDirectory = ctx.GetValue(OutputDirectory)!;
-            string fileName = await WriteToFile(outputDirectory, markdown, video.YouTubeId, publishedAt, token);
-            Console.WriteLine($"  Wrote markdown to '{fileName}'");
-            video.SubtitlesUrl = markdownUri.AbsoluteUri;
-
-            var videoQuery = service.Videos.List("snippet");
-            videoQuery.Id = video.YouTubeId;
-            var videoResponse = await videoQuery.ExecuteAsync(token);
-            if (videoResponse.Items is { Count: > 0 } videos &&
-                videos[0] is { } youTubeVideo &&
-                youTubeVideo.Snippet?.Description is { } description &&
-                description.Contains(video.SubtitlesUrl) != true)
+            if (string.IsNullOrWhiteSpace(video.YouTubeId))
             {
-                Console.WriteLine($"Updating video {video.Id} description");
-                description +=
-                    Environment.NewLine +
-                    Environment.NewLine +
-                    $"Search video contents here: {video.SubtitlesUrl}";
-
-                youTubeVideo.Snippet.Description = description;
-                await service.Videos.Update(youTubeVideo, "snippet").ExecuteAsync(token);
+                Console.WriteLine($"Video {video.Id} does not have a YouTube Id");
+                continue;
             }
-            Console.WriteLine($"  Set video ({video.Id}) subtitle URL to be '{video.SubtitlesUrl}'");
-        }
-        else
-        {
-            Console.WriteLine($"  YouTube video '{video.YouTubeId}' not found");
-            video.SubtitlesUrl = "YouTube Video Removed";
-            return 2;
-        }
-        await dbContext.SaveChangesAsync(token);
 
-        return 0;
+            int videoResult = await GenerateSubtitlesForVideoAsync(video, service, dbContext, outputDirectory, token);
+            result += videoResult;
+            if (result != 0)
+            {
+                Console.WriteLine($"Failed to generate subtitles for video {video.Id} (YouTube ID: {video.YouTubeId})");
+            }
+        }
+
+        return result;
+
+        static async Task<int> GenerateSubtitlesForVideoAsync(Video video, YouTubeService service, 
+            StreamingDbContext dbContext, DirectoryInfo outputDirectory, CancellationToken token)
+        {
+            DateTime publishedAt = video.TwitchStartTime?.Date ?? DateTime.Today;
+            Uri? markdownUri = await GetMarkdownUrl(video, publishedAt, token);
+            if (markdownUri is null)
+            {
+                Console.WriteLine($"Could not get markdown url for video (ID: {video.Id})");
+                return 1;
+            }
+
+            string youTubeId = video.YouTubeId!;
+
+            if (await service.GetSrtSubtitles(youTubeId, token) is { Length: > 0 } subtitles)
+            {
+                Console.WriteLine("  Got subtitles");
+                string markdown = Subtitles.ConvertSrtToMarkdown(youTubeId, subtitles);
+                string fileName = await WriteToFile(outputDirectory, markdown, youTubeId, publishedAt, token);
+                Console.WriteLine($"  Wrote markdown to '{fileName}'");
+                video.SubtitlesUrl = markdownUri.AbsoluteUri;
+
+                var videoQuery = service.Videos.List("snippet");
+                videoQuery.Id = video.YouTubeId;
+                var videoResponse = await videoQuery.ExecuteAsync(token);
+                if (videoResponse.Items is { Count: > 0 } videos &&
+                    videos[0] is { } youTubeVideo &&
+                    youTubeVideo.Snippet?.Description is { } description &&
+                    description.Contains(video.SubtitlesUrl) != true)
+                {
+                    Console.WriteLine($"Updating video {video.Id} description");
+                    description +=
+                        Environment.NewLine +
+                        Environment.NewLine +
+                        $"Search video contents here: {video.SubtitlesUrl}";
+
+                    youTubeVideo.Snippet.Description = description;
+                    await service.Videos.Update(youTubeVideo, "snippet").ExecuteAsync(token);
+                }
+                Console.WriteLine($"  Set video ({video.Id}) subtitle URL to be '{video.SubtitlesUrl}'");
+            }
+            else
+            {
+                Console.WriteLine($"  YouTube video '{video.YouTubeId}' not found");
+                video.SubtitlesUrl = "YouTube Video Removed";
+                return 2;
+            }
+            await dbContext.SaveChangesAsync(token);
+            return 0;
+        }
+
+        static async IAsyncEnumerable<Video> GetVideos(ParseResult ctx, StreamingDbContext dbContext,
+            [EnumeratorCancellation]CancellationToken token = default)
+        {
+            if (ctx.GetValue(All) is true)
+            {
+                await foreach(var video in dbContext.Videos
+                    .Where(x => x.YouTubeId != null && x.SubtitlesUrl == null && x.TwitchId != null)
+                    .OrderByDescending(x => x.TwitchStartTime)
+                    .AsAsyncEnumerable())
+                {
+                    yield return video;
+                }
+            }
+            else if (await GetVideoAsync(ctx, dbContext, token) is { } video)
+            {
+                yield return video;
+            }
+        }
 
         static async Task<string> WriteToFile(DirectoryInfo outputDirectory, string markdownContent, string videoId, DateTime date, CancellationToken token)
         {
