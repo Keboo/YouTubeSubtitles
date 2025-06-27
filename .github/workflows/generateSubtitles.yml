@@ -10,6 +10,10 @@ on:
   schedule:
   - cron: '0 16 * * *'
 
+permissions:
+  id-token: write
+  contents: read
+
 defaults:
   run:
     working-directory: SubtitleConverter
