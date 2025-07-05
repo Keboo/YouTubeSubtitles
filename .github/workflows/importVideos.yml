@@ -2,11 +2,11 @@ name: Import Videos
 
 on:
   workflow_dispatch:
-    # inputs:
-    #   video-id:
-    #     description: 'The video-id to process'
-    #     required: false
-    #     default: ''
+    inputs:
+      video-id:
+        description: 'The video-id to process'
+        required: false
+        default: ''
   schedule:
   - cron: '0 8 * * 1,5,6'
 
@@ -45,5 +45,10 @@ jobs:
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     
-    - name: Run
+    - name: Process new videos
+      if: ${{ github.event.inputs.video-id == '' }}  
       run: ./publish/Keboo.Editor.exe process --working-directory ./temp
+
+    - name: Process specific video
+      if: ${{ github.event.inputs.video-id != '' }}
+      run: ./publish/Keboo.Editor.exe process --video-id ${{ github.event.inputs.video-id }} --working-directory ./temp

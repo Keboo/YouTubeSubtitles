@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using StreamingTools.Data;
 using StreamingTools.Twitch;
 using System.CommandLine;
@@ -93,7 +93,7 @@ public class TwitchCommand : CliCommand
             return;
         }
 
-        using StreamingDbContext dbContext = await GetDbContextAsync();
+        using StreamingDbContext dbContext = await StreamingDbContext.CreateAsync(CancellationToken.None);
 
         foreach (TwitchVideo video in videoResponse.Videos)
         {
@@ -136,7 +136,7 @@ public class TwitchCommand : CliCommand
             return null;
         }
 
-        using StreamingDbContext dbContext = await GetDbContextAsync();
+        using StreamingDbContext dbContext = await StreamingDbContext.CreateAsync(CancellationToken.None);
 
         foreach (TwitchVideo video in videoResponse.Videos)
         {
@@ -165,8 +165,8 @@ public class TwitchCommand : CliCommand
         return null;
     }
 
-    private static async Task DownloadSingleAsync(string clientId,
-        string clientSecret, string videoId, DirectoryInfo outputDirectory)
+    public static async Task<VideoData?> DownloadSingleAsync(string clientId,
+        string clientSecret, string twitchVideoId, DirectoryInfo outputDirectory)
     {
         TwitchAPI api = new(settings: new ApiSettings()
         {
@@ -174,18 +174,18 @@ public class TwitchCommand : CliCommand
             Secret = clientSecret,
         });
 
-        Console.WriteLine($"Retrieving video {videoId} from twitch ({DateTime.Now})");
-        var videoResponse = await api.Helix.Videos.GetVideosAsync([videoId]);
+        Console.WriteLine($"Downloading video {twitchVideoId} from twitch ({DateTime.Now})");
+        var videoResponse = await api.Helix.Videos.GetVideosAsync([twitchVideoId]);
 
         if (videoResponse.Videos.Length == 0)
         {
-            Console.WriteLine($"Could not find video {videoId}");
-            return;
+            Console.WriteLine($"Could not find video {twitchVideoId}");
+            return null;
         }
 
         var twitchClient = new Twitch(HttpClient);
 
-        using StreamingDbContext dbContext = await GetDbContextAsync();
+        using StreamingDbContext dbContext = await StreamingDbContext.CreateAsync(CancellationToken.None);
 
         foreach (TwitchVideo video in videoResponse.Videos)
         {
@@ -216,14 +216,10 @@ public class TwitchCommand : CliCommand
             await WriteVideoDescriptionAsync(dbVideo, GetOutputFile(video, outputDirectory));
 
             await dbContext.SaveChangesAsync();
-        }
-    }
 
-    private static async Task<StreamingDbContext> GetDbContextAsync()
-    {
-        var dbContext = new StreamingDbContext();
-        await dbContext.Database.MigrateAsync();
-        return dbContext;
+            return new VideoData(dbVideo.Id, downloadedFile, null);
+        }
+        return null;
     }
 
     private static Video GetDbVideo(TwitchVideo video)
@@ -270,7 +266,6 @@ public class TwitchCommand : CliCommand
         Console.WriteLine($"Downloaded video file to {outputFile.FullName} ({DateTime.Now})");
         return outputFile;
     }
-
 
     private static FileInfo GetOutputFile(TwitchVideo video, DirectoryInfo outputDirectory)
     {

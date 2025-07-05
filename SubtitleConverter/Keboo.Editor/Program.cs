@@ -1,4 +1,6 @@
-﻿using StreamingTools;
+﻿using Microsoft.EntityFrameworkCore;
+using StreamingTools;
+using StreamingTools.Data;
 using System.CommandLine;
 
 namespace Keboo.Editor;
@@ -12,11 +14,17 @@ public class Program
         DefaultValueFactory = _ => new DirectoryInfo(@"D:\Temp")
     };
 
+    private static CliOption<int> VideoId { get; } = new CliOption<int>("--video-id", "-i")
+    {
+        Description = "The video ID to reprocess"
+    };
+
     public static Task<int> Main(string[] args)
     {
         CliCommand processAll = new("process")
         {
-            TempDirectory
+            TempDirectory, 
+            VideoId
         };
         processAll.SetAction(ProcessAll);
 
@@ -36,13 +44,35 @@ public class Program
         Console.WriteLine($"Processing all videos... ({DateTime.Now})");
 
         DirectoryInfo output = ctx.GetValue(TempDirectory)!;
+        int? videoId = ctx.GetValue(VideoId);
 
         VideoData? video;
         do
         {
             output.Create();
-            
-            video = await TwitchCommand.DownloadNewVideo(Config.TwitchClientId, Config.TwitchClientSecret, Config.TwitchUserId, output);
+
+            if (videoId is not null)
+            {
+                using StreamingDbContext dbContext = await StreamingDbContext.CreateAsync(token);
+                var dbVideo = await dbContext.Videos.FirstOrDefaultAsync(x => x.Id == videoId.Value, token);
+                if (dbVideo is null)
+                {
+                    Console.WriteLine($"Video with ID {videoId} not found.");
+                    return 1;
+                }
+                string? twitchId = dbVideo.TwitchId;
+                if (twitchId is null)
+                {
+                    Console.WriteLine($"Video with ID {videoId} has no Twitch ID.");
+                    return 1;
+                }
+
+                video = await TwitchCommand.DownloadSingleAsync(Config.TwitchClientId, Config.TwitchClientSecret, twitchId, output);
+            }
+            else
+            {
+                video = await TwitchCommand.DownloadNewVideo(Config.TwitchClientId, Config.TwitchClientSecret, Config.TwitchUserId, output);
+            }
 
             if (video is not null)
             {
@@ -63,7 +93,7 @@ public class Program
                 Console.WriteLine($"Processed video: {video.VideoId} ({DateTime.Now})");
             }
         }
-        while (video is not null);
+        while (video is not null && videoId is null);
         return 0;
     }
 }
