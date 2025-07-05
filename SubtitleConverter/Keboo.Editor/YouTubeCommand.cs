@@ -154,7 +154,7 @@ public partial class YouTubeCommand : CliCommand
 
     public static async Task<bool> UploadAsync(Video video, FileInfo sourceFile, CancellationToken token)
     {
-        Console.WriteLine($"Uploading video {video.Id} to YouTube ({sourceFile.FullName})");
+        Console.WriteLine($"Uploading video {video.Id} to YouTube ({sourceFile.FullName}) {DateTime.UtcNow}");
         var service = await YouTubeFactory.GetServiceAsync();
 
         var details = StreamingTools.YouTube.Description.GetDetails(video);
@@ -196,7 +196,7 @@ public partial class YouTubeCommand : CliCommand
             if (obj.Status != lastStatus)
             {
                 lastStatus = obj.Status;
-                Console.WriteLine($"Upload status => {obj.Status}");
+                Console.WriteLine($"Upload status => {obj.Status} {DateTime.UtcNow}");
             }
 
             if (obj.Status == Google.Apis.Upload.UploadStatus.Failed)

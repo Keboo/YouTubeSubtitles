@@ -2,11 +2,11 @@ name: Import Videos
 
 on:
   workflow_dispatch:
-    inputs:
-      video-id:
-        description: 'The twitch video to process'
-        required: false
-        default: ''
+    # inputs:
+    #   video-id:
+    #     description: 'The video-id to process'
+    #     required: false
+    #     default: ''
   schedule:
   - cron: '0 8 * * 1,5,6'
 
