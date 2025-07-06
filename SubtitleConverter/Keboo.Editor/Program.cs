@@ -33,6 +33,8 @@ public class Program
 
     private static async Task<int> ProcessAll(ParseResult ctx, CancellationToken token)
     {
+        Console.WriteLine($"Processing all videos... ({DateTime.Now})");
+
         DirectoryInfo output = ctx.GetValue(TempDirectory)!;
 
         VideoData? video;
@@ -53,11 +55,12 @@ public class Program
                 {
                     return 1;
                 }
-                    output.Refresh();
+                output.Refresh();
                 if (output.Exists)
                 {
                     output.Delete(true);
                 }
+                Console.WriteLine($"Processed video: {video.VideoId} ({DateTime.Now})");
             }
         }
         while (video is not null);

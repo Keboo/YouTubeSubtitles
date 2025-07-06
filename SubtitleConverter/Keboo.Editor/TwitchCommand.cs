@@ -127,7 +127,7 @@ public class TwitchCommand : CliCommand
             Secret = clientSecret,
         });
 
-        Console.WriteLine("Retrieving new videos from twitch");
+        Console.WriteLine($"Retrieving new videos from twitch ({DateTime.Now})");
         var videoResponse = await api.Helix.Videos.GetVideosAsync(userId: userId);
 
         if (videoResponse.Videos.Length == 0)
@@ -174,7 +174,7 @@ public class TwitchCommand : CliCommand
             Secret = clientSecret,
         });
 
-        Console.WriteLine($"Retrieving video {videoId} from twitch");
+        Console.WriteLine($"Retrieving video {videoId} from twitch ({DateTime.Now})");
         var videoResponse = await api.Helix.Videos.GetVideosAsync([videoId]);
 
         if (videoResponse.Videos.Length == 0)
@@ -249,7 +249,7 @@ public class TwitchCommand : CliCommand
 
     private static async Task<FileInfo?> DownloadVideoAsync(DirectoryInfo outputDirectory, TwitchVideo video)
     {
-        Console.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ");
+        Console.WriteLine($"Downloading '{video.Title}' from {video.CreatedAt} - {video.Id} ({DateTime.Now})");
 
         var twitchClient = new Twitch(HttpClient);
 
@@ -267,7 +267,7 @@ public class TwitchCommand : CliCommand
             return null;
         }
 
-        Console.WriteLine($"Downloaded video file to {outputFile.FullName}");
+        Console.WriteLine($"Downloaded video file to {outputFile.FullName} ({DateTime.Now})");
         return outputFile;
     }
 

@@ -28,7 +28,7 @@ public static class Ffmpeg
         TimeSpan? minEndSilence = null,
         Action<string>? log = null)
     {
-        log?.Invoke($"Trimming silence from {filePath.FullName} => {outputFile.FullName}");
+        log?.Invoke($"Trimming silence from {filePath.FullName} => {outputFile.FullName} ({DateTime.Now})");
         var startInfo = new ProcessStartInfo
         {
             FileName = "ffmpeg",
@@ -39,7 +39,7 @@ public static class Ffmpeg
         };
         List<(double StartTime, double EndTime)> silenceRegions = [];
 
-        log?.Invoke($"Running {startInfo.FileName} {startInfo.Arguments}");
+        log?.Invoke($"Running {startInfo.FileName} {startInfo.Arguments} ({DateTime.Now})");
 
         using (var ffmpegProcess = new Process
         {
@@ -100,12 +100,12 @@ public static class Ffmpeg
             Arguments = argumentBuilder.ToString()
         };
 
-        log?.Invoke($"Running {startInfo.FileName} {startInfo.Arguments}");
+        log?.Invoke($"Running {startInfo.FileName} {startInfo.Arguments} ({DateTime.Now})");
 
         if (Process.Start(startInfo) is { } ffmpegTrimProcess)
         {
             await ffmpegTrimProcess.WaitForExitAsync(CancellationToken.None);
-            log?.Invoke($"Trimmed silence => {outputFile.FullName}");
+            log?.Invoke($"Trimmed silence => {outputFile.FullName} ({DateTime.Now})");
             return true;
         }
         log?.Invoke("Failed to trim silence");
