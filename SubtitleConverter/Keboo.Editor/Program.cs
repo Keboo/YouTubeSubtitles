@@ -14,7 +14,7 @@ public class Program
         DefaultValueFactory = _ => new DirectoryInfo(@"D:\Temp")
     };
 
-    private static CliOption<int> VideoId { get; } = new CliOption<int>("--video-id", "-i")
+    private static CliOption<int?> VideoId { get; } = new CliOption<int?>("--video-id", "-i")
     {
         Description = "The video ID to reprocess"
     };
@@ -24,7 +24,7 @@ public class Program
         CliCommand processAll = new("process")
         {
             TempDirectory, 
-            VideoId
+            VideoId 
         };
         processAll.SetAction(ProcessAll);
 
