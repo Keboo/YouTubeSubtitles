@@ -77,18 +77,22 @@ public class Program
             if (video is not null)
             {
                 FileInfo outputFile = new(Path.ChangeExtension(video.DownloadedFile.FullName, ".trimmed.mp4"));
-                if (await VideoCommand.Trim(video.DownloadedFile, outputFile))
-                {
-                    await YouTubeCommand.UploadVideoAsync(outputFile, video.VideoId, token);
-                }
-                else
+                if (!await VideoCommand.Trim(video.DownloadedFile, outputFile) || 
+                    await YouTubeCommand.UploadVideoAsync(outputFile, video.VideoId, token) != true)
                 {
                     return 1;
                 }
                 output.Refresh();
                 if (output.Exists)
                 {
-                    output.Delete(true);
+                    try
+                    {
+                        output.Delete(true);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Failed to delete temporary working directory '{output.FullName}'.");
+                    }
                 }
                 Console.WriteLine($"Processed video: {video.VideoId} ({DateTime.Now})");
             }
