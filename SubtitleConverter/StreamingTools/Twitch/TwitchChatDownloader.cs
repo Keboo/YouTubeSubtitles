@@ -22,6 +22,11 @@ public class TwitchChatDownloader
     /// <returns>A newline-delimited string of URLs found in the user's messages</returns>
     public async Task<string?> GetSharedLinksFromChatAsync(string videoId, string username)
     {
+        if (string.IsNullOrWhiteSpace(videoId))
+            throw new ArgumentException("Video ID cannot be null or empty", nameof(videoId));
+        if (string.IsNullOrWhiteSpace(username))
+            throw new ArgumentException("Username cannot be null or empty", nameof(username));
+
         var messages = await DownloadChatMessagesAsync(videoId);
         var userMessages = messages.Where(m => 
             string.Equals(m.Username, username, StringComparison.OrdinalIgnoreCase));
@@ -86,8 +91,9 @@ public class TwitchChatDownloader
             return [];
 
         // Regex to match URLs (http, https, and www patterns)
+        // Using a timeout to prevent ReDoS attacks
         var urlPattern = @"https?://[^\s]+|www\.[^\s]+";
-        var matches = Regex.Matches(text, urlPattern, RegexOptions.IgnoreCase);
+        var matches = Regex.Matches(text, urlPattern, RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1));
 
         var urls = new List<string>();
         foreach (Match match in matches)
