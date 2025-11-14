@@ -73,11 +73,35 @@ Both implementations use the same core functionality from the `StreamingTools` l
 
 The old `SubtitleConverter` tool can be deprecated in favor of the `Keboo.Editor youtube subtitles` command.
 
-## Recommendation
+## GitHub Actions Workflows
 
-Update documentation and workflows to use:
-```bash
-dotnet run -- youtube subtitles --all --output-directory ../../Subtitles
+The GitHub Actions workflows are **already using the new Keboo.Editor tool**:
+
+### generateSubtitles.yml
+```yaml
+- name: Run
+  run: ./publish/Keboo.Editor.exe youtube subtitles --all --output-directory ../Subtitles
 ```
 
-Instead of the old UpdateSubtitles.ps1 script which references non-existent `--playlist` parameters.
+This workflow:
+1. Publishes Keboo.Editor
+2. Runs the `youtube subtitles` command
+3. Commits and pushes the generated markdown files
+
+### Status
+✅ **Workflows fully migrated** - No changes needed
+
+## Obsolete Files
+
+The following files are **no longer used** and can be deprecated:
+
+1. **UpdateSubtitles.ps1** - References non-existent `--playlist` parameter
+2. **SubtitleConverter/SubtitleConverter/Program.cs** - Replaced by Keboo.Editor
+3. **SubtitleConverter/VideoConverter/Program.cs** - Different tool, possibly also deprecated
+
+## Recommendation
+
+1. ✅ Continue using Keboo.Editor for subtitle generation (already in use)
+2. 📝 Update or remove UpdateSubtitles.ps1 script
+3. 📝 Consider archiving or removing the old SubtitleConverter project
+4. ✅ GitHub Actions workflows are already using the correct tool - no changes needed
