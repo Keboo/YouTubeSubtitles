@@ -30,6 +30,9 @@ namespace StreamingTools.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("SharedLinks")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SubtitlesUrl")
                         .HasColumnType("nvarchar(max)");
 

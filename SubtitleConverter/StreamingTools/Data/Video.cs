@@ -15,4 +15,5 @@ public class Video : BaseEntity
 
 
     public string? SubtitlesUrl { get; set; }
+    public string? SharedLinks { get; set; }
 }
