@@ -251,9 +251,8 @@ public partial class YouTubeCommand : CliCommand
         var service = await YouTubeFactory.GetServiceAsync();
         DirectoryInfo outputDirectory = ctx.GetValue(OutputDirectory)!;
 
-
         int result = 0;
-        await foreach(var video in GetVideos(ctx, dbContext).WithCancellation(token))
+        await foreach(var video in GetVideos(ctx, dbContext, token).WithCancellation(token))
         {
             if (string.IsNullOrWhiteSpace(video.YouTubeId))
             {

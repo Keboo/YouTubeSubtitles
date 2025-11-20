@@ -18,7 +18,7 @@
     },
     "Generate Subtitles": {
       "commandName": "Project",
-      "commandLineArgs": "youtube subtitles --video-id 27 --output-directory ../../../../../Subtitles"
+      "commandLineArgs": "youtube subtitles --all --output-directory ../../../../../Subtitles"
     },
     "Download New Videos": {
       "commandName": "Project",
