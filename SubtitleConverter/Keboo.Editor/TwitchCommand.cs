@@ -111,6 +111,16 @@ public class TwitchCommand : CliCommand
             }
 
             dbVideo = GetDbVideo(video);
+            
+            // Download chat and extract shared links
+            Console.WriteLine($"Downloading chat for video {video.Id}...");
+            var chatDownloader = new TwitchChatDownloader(HttpClient);
+            dbVideo.SharedLinks = await chatDownloader.GetSharedLinksFromChatAsync(video.Id, "kitokeboo");
+            if (!string.IsNullOrWhiteSpace(dbVideo.SharedLinks))
+            {
+                Console.WriteLine($"Found {dbVideo.SharedLinks.Split(Environment.NewLine).Length} shared link(s)");
+            }
+            
             dbContext.Videos.Add(dbVideo);
             await dbContext.SaveChangesAsync();
 
@@ -144,6 +154,16 @@ public class TwitchCommand : CliCommand
             if (dbVideo is null)
             {
                 dbVideo = GetDbVideo(video);
+                
+                // Download chat and extract shared links for new videos
+                Console.WriteLine($"Downloading chat for video {video.Id}...");
+                var chatDownloader = new TwitchChatDownloader(HttpClient);
+                dbVideo.SharedLinks = await chatDownloader.GetSharedLinksFromChatAsync(video.Id, "kitokeboo");
+                if (!string.IsNullOrWhiteSpace(dbVideo.SharedLinks))
+                {
+                    Console.WriteLine($"Found {dbVideo.SharedLinks.Split(Environment.NewLine).Length} shared link(s)");
+                }
+                
                 dbContext.Videos.Add(dbVideo);
                 await dbContext.SaveChangesAsync();
             }
@@ -211,6 +231,15 @@ public class TwitchCommand : CliCommand
                 dbVideo.TwitchTitle = video.Title;
                 dbVideo.TwitchDescription = video.Description;
                 dbVideo.TwitchUrl = video.Url;
+            }
+
+            // Download chat and extract shared links
+            Console.WriteLine($"Downloading chat for video {video.Id}...");
+            var chatDownloader = new TwitchChatDownloader(HttpClient);
+            dbVideo.SharedLinks = await chatDownloader.GetSharedLinksFromChatAsync(video.Id, "kitokeboo");
+            if (!string.IsNullOrWhiteSpace(dbVideo.SharedLinks))
+            {
+                Console.WriteLine($"Found {dbVideo.SharedLinks.Split(Environment.NewLine).Length} shared link(s)");
             }
 
             await WriteVideoDescriptionAsync(dbVideo, GetOutputFile(video, outputDirectory));
