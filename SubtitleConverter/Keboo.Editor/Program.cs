@@ -19,12 +19,18 @@ public class Program
         Description = "The video ID to reprocess"
     };
 
+    private static CliOption<bool> Clean { get; } = new CliOption<bool>("--clean", "-c")
+    {
+        Description = "Whether to for a clean state rather than leveraging cached data"
+    };
+
     public static Task<int> Main(string[] args)
     {
         CliCommand processAll = new("process")
         {
             TempDirectory, 
-            VideoId 
+            VideoId,
+            Clean
         };
         processAll.SetAction(ProcessAll);
 
@@ -45,6 +51,12 @@ public class Program
 
         DirectoryInfo output = ctx.GetValue(TempDirectory)!;
         int? videoId = ctx.GetValue(VideoId);
+        bool clean = ctx.GetValue(Clean);
+
+        if (clean && output.Exists)
+        {
+            output.Delete(true);
+        }
 
         VideoData? video;
         do

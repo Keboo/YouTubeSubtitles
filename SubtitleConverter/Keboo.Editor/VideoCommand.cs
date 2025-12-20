@@ -175,6 +175,11 @@ public class VideoCommand : CliCommand
         else if (File.Exists(input.FullName))
         {
             var outputFile = new FileInfo(output.FullName);
+            if (outputFile.Exists)
+            {
+                Console.WriteLine($"Skipping {input.FullName} => {outputFile} already exists");
+                return true;
+            }
             outputFile.Directory?.Create();
             //Both are files
             return await Ffmpeg.TrimSilenceAsync(new FileInfo(input.FullName), outputFile, log: Console.WriteLine);
