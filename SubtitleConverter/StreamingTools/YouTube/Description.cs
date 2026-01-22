@@ -142,6 +142,12 @@ public static class Description
                 Broadcasted live on Twitch -- Watch live at https://twitch.keboo.dev
                 """;
 
+        // Add shared links from chat if available
+        if (!string.IsNullOrWhiteSpace(video.SharedLinks))
+        {
+            description += Environment.NewLine + Environment.NewLine + "Links shared during stream:" + Environment.NewLine + video.SharedLinks;
+        }
+
         return new VideoDetails(
             title ?? "",
             description,
