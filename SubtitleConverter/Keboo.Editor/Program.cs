@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using StreamingTools;
 using StreamingTools.Data;
+using StreamingTools.YouTube;
 using System.CommandLine;
 
 namespace Keboo.Editor;
@@ -47,6 +48,9 @@ public class Program
 
     private static async Task<int> ProcessAll(ParseResult ctx, CancellationToken token)
     {
+        // Pre-emptively auth with youtube so I can walk away while this runs.
+        _ = await YouTubeFactory.GetServiceAsync();
+
         Console.WriteLine($"Processing all videos... ({DateTime.Now})");
 
         DirectoryInfo output = ctx.GetValue(TempDirectory)!;
