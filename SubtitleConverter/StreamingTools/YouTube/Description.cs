@@ -133,6 +133,15 @@ public static class Description
                     Avalonia UI: https://avaloniaui.net
                     """;
         }
+        if (video.TwitchTitle?.Contains("XAMLTest", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            tags.Add("XAML");
+
+            description += """
+
+                    XAMLTest: https://github.com/Keboo/XAMLTest
+                    """;
+        }
 
         description += """
 
