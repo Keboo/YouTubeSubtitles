@@ -7,10 +7,13 @@ using StreamingTools.Subtitle;
 using StreamingTools.YouTube;
 using System.CommandLine;
 using System.Runtime.CompilerServices;
+using PlaylistStatus = Google.Apis.YouTube.v3.Data.PlaylistStatus;
+using PlaylistSnippet = Google.Apis.YouTube.v3.Data.PlaylistSnippet;
 using VideoRecordingDetails = Google.Apis.YouTube.v3.Data.VideoRecordingDetails;
 using VideoSnippet = Google.Apis.YouTube.v3.Data.VideoSnippet;
 using VideoStatus = Google.Apis.YouTube.v3.Data.VideoStatus;
 using YouTubeVideo = Google.Apis.YouTube.v3.Data.Video;
+using YouTubePlaylist = Google.Apis.YouTube.v3.Data.Playlist;
 
 namespace Keboo.Editor;
 
@@ -46,6 +49,24 @@ public partial class YouTubeCommand : CliCommand
     private static CliOption<bool> All { get; } = new CliOption<bool>("--all", "-a")
     {
         Description = "Indicates if all videos should be processed",
+    };
+
+    private static CliOption<string> PlaylistNameOption { get; } = new CliOption<string>("--name", "-n")
+    {
+        Description = "The playlist name",
+        Required = true
+    };
+
+    private static CliOption<DateOnly> StartDateOption { get; } = new CliOption<DateOnly>("--start-date", "--from")
+    {
+        Description = "The first published date to include (yyyy-MM-dd)",
+        Required = true
+    };
+
+    private static CliOption<DateOnly> EndDateOption { get; } = new CliOption<DateOnly>("--end-date", "--to")
+    {
+        Description = "The last published date to include (yyyy-MM-dd)",
+        Required = true
     };
 
     public YouTubeCommand()
@@ -96,6 +117,71 @@ public partial class YouTubeCommand : CliCommand
         };
         Add(uploadCommand);
         uploadCommand.SetAction(UploadVideo);
+
+        var playlistCommand = new CliCommand("playlist")
+        {
+            PlaylistNameOption,
+            StartDateOption,
+            EndDateOption
+        };
+        Add(playlistCommand);
+        playlistCommand.SetAction(CreatePlaylistFromPublishedDateRangeAsync);
+    }
+
+    private static async Task<int> CreatePlaylistFromPublishedDateRangeAsync(ParseResult ctx, CancellationToken token)
+    {
+        string playlistName = ctx.GetValue(PlaylistNameOption)!.Trim();
+        if (string.IsNullOrWhiteSpace(playlistName))
+        {
+            Console.WriteLine("Playlist name cannot be empty.");
+            return 1;
+        }
+
+        DateOnly startDate = ctx.GetValue(StartDateOption);
+        DateOnly endDate = ctx.GetValue(EndDateOption);
+        if (!YouTubePublishedDateRange.TryCreate(startDate, endDate, out var dateRange))
+        {
+            Console.WriteLine($"The end date '{endDate:yyyy-MM-dd}' must be on or after the start date '{startDate:yyyy-MM-dd}'.");
+            return 1;
+        }
+
+        var service = await YouTubeFactory.GetServiceAsync();
+        var (playlist, created) = await GetOrCreatePlaylistAsync(service, playlistName, token);
+        string targetPlaylistName = playlist.Snippet?.Title ?? playlistName;
+
+        Console.WriteLine(created
+            ? $"Created unlisted playlist '{targetPlaylistName}'."
+            : $"Using existing playlist '{targetPlaylistName}'.");
+
+        HashSet<string> existingVideoIds = await GetPlaylistVideoIdsAsync(service, playlist.Id!, token);
+        int matchedCount = 0;
+        int addedCount = 0;
+        int alreadyPresentCount = 0;
+
+        await foreach (var video in GetChannelVideosPublishedInRangeAsync(service, dateRange, token))
+        {
+            matchedCount++;
+            if (!existingVideoIds.Add(video.VideoId))
+            {
+                alreadyPresentCount++;
+                Console.WriteLine($"Skipping '{video.Title}' ({video.PublishedAt:yyyy-MM-dd}) because it is already in '{targetPlaylistName}'.");
+                continue;
+            }
+
+            await AddVideoToPlaylistAsync(service, playlist.Id!, video.VideoId, token);
+            addedCount++;
+            Console.WriteLine($"Added '{video.Title}' ({video.PublishedAt:yyyy-MM-dd}) to '{targetPlaylistName}'.");
+        }
+
+        if (matchedCount == 0)
+        {
+            Console.WriteLine($"No YouTube videos were published between {startDate:yyyy-MM-dd} and {endDate:yyyy-MM-dd}.");
+            return 0;
+        }
+
+        Console.WriteLine(
+            $"Processed {matchedCount} video(s) for '{targetPlaylistName}' from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}: {addedCount} added, {alreadyPresentCount} already present.");
+        return 0;
     }
 
     private static async Task<int> UploadVideo(ParseResult ctx, CancellationToken token)
@@ -209,30 +295,12 @@ public partial class YouTubeCommand : CliCommand
         if (success)
         {
             Console.WriteLine($"Video {video.Id} uploaded successfully with YouTube ID: {video.YouTubeId}, adding to playlists");
-            var playlistListRequest = service.Playlists.List("snippet");
-            playlistListRequest.Mine = true;
-            playlistListRequest.MaxResults = 100;
-            var playlists = await playlistListRequest.ExecuteAsync(token);
             foreach (var playlistName in details.Playlists)
             {
-                var playlist = playlists.Items.FirstOrDefault(x => x.Snippet.Title == playlistName);
+                var playlist = await GetPlaylistByTitleAsync(service, playlistName, token);
                 if (playlist != null)
                 {
-                    var playlistItem = new Google.Apis.YouTube.v3.Data.PlaylistItem
-                    {
-                        Snippet = new Google.Apis.YouTube.v3.Data.PlaylistItemSnippet
-                        {
-                            PlaylistId = playlist.Id,
-                            ResourceId = new Google.Apis.YouTube.v3.Data.ResourceId
-                            {
-                                Kind = "youtube#video",
-                                VideoId = video.YouTubeId
-                            }
-                        }
-                    };
-
-                    var playlistInsertRequest = service.PlaylistItems.Insert(playlistItem, "snippet");
-                    await playlistInsertRequest.ExecuteAsync(token);
+                    await AddVideoToPlaylistAsync(service, playlist.Id!, video.YouTubeId!, token);
                 }
             }
             Console.WriteLine($"Video {video.Id} added to playlists: {string.Join(", ", details.Playlists)}");
@@ -396,4 +464,127 @@ public partial class YouTubeCommand : CliCommand
 
     [GeneratedRegex("_(?<TwitchVideoId>[0-9]+).trimmed")]
     private static partial Regex TwitchId();
+
+    private static async Task<YouTubePlaylist?> GetPlaylistByTitleAsync(YouTubeService service, string playlistName, CancellationToken token)
+    {
+        var playlistListRequest = service.Playlists.List("snippet,status");
+        playlistListRequest.Mine = true;
+        playlistListRequest.MaxResults = 50;
+
+        do
+        {
+            var playlists = await playlistListRequest.ExecuteAsync(token);
+            var playlist = playlists.Items.FirstOrDefault(x => string.Equals(x.Snippet?.Title, playlistName, StringComparison.Ordinal));
+            if (playlist is not null)
+            {
+                return playlist;
+            }
+
+            playlistListRequest.PageToken = playlists.NextPageToken;
+        }
+        while (!string.IsNullOrWhiteSpace(playlistListRequest.PageToken));
+
+        return null;
+    }
+
+    private static async Task<(YouTubePlaylist Playlist, bool Created)> GetOrCreatePlaylistAsync(YouTubeService service, string playlistName, CancellationToken token)
+    {
+        if (await GetPlaylistByTitleAsync(service, playlistName, token) is { } existingPlaylist)
+        {
+            return (existingPlaylist, false);
+        }
+
+        var newPlaylist = new YouTubePlaylist
+        {
+            Snippet = new PlaylistSnippet
+            {
+                Title = playlistName
+            },
+            Status = new PlaylistStatus
+            {
+                PrivacyStatus = "unlisted"
+            }
+        };
+
+        var createdPlaylist = await service.Playlists.Insert(newPlaylist, "snippet,status").ExecuteAsync(token);
+        return (createdPlaylist, true);
+    }
+
+    private static async Task<HashSet<string>> GetPlaylistVideoIdsAsync(YouTubeService service, string playlistId, CancellationToken token)
+    {
+        HashSet<string> videoIds = [];
+        var playlistItemsRequest = service.PlaylistItems.List("snippet");
+        playlistItemsRequest.PlaylistId = playlistId;
+        playlistItemsRequest.MaxResults = 50;
+
+        do
+        {
+            var playlistItems = await playlistItemsRequest.ExecuteAsync(token);
+            foreach (var item in playlistItems.Items)
+            {
+                if (!string.IsNullOrWhiteSpace(item.Snippet?.ResourceId?.VideoId))
+                {
+                    videoIds.Add(item.Snippet.ResourceId.VideoId);
+                }
+            }
+
+            playlistItemsRequest.PageToken = playlistItems.NextPageToken;
+        }
+        while (!string.IsNullOrWhiteSpace(playlistItemsRequest.PageToken));
+
+        return videoIds;
+    }
+
+    private static async Task AddVideoToPlaylistAsync(YouTubeService service, string playlistId, string videoId, CancellationToken token)
+    {
+        var playlistItem = new Google.Apis.YouTube.v3.Data.PlaylistItem
+        {
+            Snippet = new Google.Apis.YouTube.v3.Data.PlaylistItemSnippet
+            {
+                PlaylistId = playlistId,
+                ResourceId = new Google.Apis.YouTube.v3.Data.ResourceId
+                {
+                    Kind = "youtube#video",
+                    VideoId = videoId
+                }
+            }
+        };
+
+        await service.PlaylistItems.Insert(playlistItem, "snippet").ExecuteAsync(token);
+    }
+
+    private static async IAsyncEnumerable<YouTubeChannelVideo> GetChannelVideosPublishedInRangeAsync(
+        YouTubeService service,
+        YouTubePublishedDateRange dateRange,
+        [EnumeratorCancellation] CancellationToken token = default)
+    {
+        var listVideosRequest = service.Search.List("snippet");
+        listVideosRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
+        listVideosRequest.ForMine = true;
+        listVideosRequest.MaxResults = 50;
+        listVideosRequest.Type = "video";
+        listVideosRequest.PublishedAfterDateTimeOffset = dateRange.PublishedAfter;
+        listVideosRequest.PublishedBeforeDateTimeOffset = dateRange.PublishedBefore;
+
+        do
+        {
+            var response = await listVideosRequest.ExecuteAsync(token);
+            foreach (var item in response.Items)
+            {
+                if (item.Id?.VideoId is not { Length: > 0 } videoId ||
+                    item.Snippet?.PublishedAtDateTimeOffset is not { } publishedAt ||
+                    !dateRange.Includes(publishedAt))
+                {
+                    continue;
+                }
+
+                yield return new YouTubeChannelVideo(videoId, item.Snippet.Title ?? videoId, publishedAt);
+            }
+
+            listVideosRequest.PageToken = response.NextPageToken;
+        }
+        while (!string.IsNullOrWhiteSpace(listVideosRequest.PageToken));
+    }
+
+    private sealed record YouTubeChannelVideo(string VideoId, string Title, DateTimeOffset PublishedAt);
 }

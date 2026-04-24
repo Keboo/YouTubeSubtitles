@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\StreamingTools\StreamingTools.csproj" />
+    <ProjectReference Include="..\Keboo.Editor\Keboo.Editor.csproj" />
   </ItemGroup>
 
   <ItemGroup>
