@@ -558,9 +558,21 @@ public partial class YouTubeCommand : CliCommand
         YouTubePublishedDateRange dateRange,
         [EnumeratorCancellation] CancellationToken token = default)
     {
+        // Get the authenticated user's channel ID - required when using date filters
+        var channelsRequest = service.Channels.List("id");
+        channelsRequest.Mine = true;
+        var channelsResponse = await channelsRequest.ExecuteAsync(token);
+        string? channelId = channelsResponse.Items?.FirstOrDefault()?.Id;
+
+        if (string.IsNullOrEmpty(channelId))
+        {
+            Console.WriteLine("Could not retrieve authenticated user's channel ID.");
+            yield break;
+        }
+
         var listVideosRequest = service.Search.List("snippet");
         listVideosRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
-        listVideosRequest.ForMine = true;
+        listVideosRequest.ChannelId = channelId;
         listVideosRequest.MaxResults = 50;
         listVideosRequest.Type = "video";
         listVideosRequest.PublishedAfterDateTimeOffset = dateRange.PublishedAfter;

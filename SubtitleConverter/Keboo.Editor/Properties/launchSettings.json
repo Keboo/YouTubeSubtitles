@@ -20,6 +20,10 @@
       "commandName": "Project",
       "commandLineArgs": "youtube subtitles --all --output-directory ../../../../../Subtitles"
     },
+    "Create MVP Playlist": {
+      "commandName": "Project",
+      "commandLineArgs": "youtube playlist --name MVP-2025 --start-date 2025-04-01 --end-date 2026-03-31"
+    },
     "Download New Videos": {
       "commandName": "Project",
       "commandLineArgs": "twitch download --output D:\\Temp"
