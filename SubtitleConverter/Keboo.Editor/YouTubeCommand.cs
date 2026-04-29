@@ -319,6 +319,11 @@ public partial class YouTubeCommand : CliCommand
         var service = await YouTubeFactory.GetServiceAsync();
         DirectoryInfo outputDirectory = ctx.GetValue(OutputDirectory)!;
 
+        if (ctx.GetValue(All) is true)
+        {
+            await SyncYouTubeVideosToDatabase(service, dbContext, token);
+        }
+
         int result = 0;
         await foreach(var video in GetVideos(ctx, dbContext, token).WithCancellation(token))
         {
@@ -341,7 +346,7 @@ public partial class YouTubeCommand : CliCommand
         static async Task<int> GenerateSubtitlesForVideoAsync(Video video, YouTubeService service, 
             StreamingDbContext dbContext, DirectoryInfo outputDirectory, CancellationToken token)
         {
-            DateTime publishedAt = video.TwitchStartTime?.Date ?? DateTime.Today;
+            DateTime publishedAt = video.TwitchStartTime?.Date ?? video.YouTubePublishTime?.Date ?? DateTime.Today;
             Uri? markdownUri = await GetMarkdownUrl(video, publishedAt, token);
             if (markdownUri is null)
             {
@@ -394,8 +399,8 @@ public partial class YouTubeCommand : CliCommand
             if (ctx.GetValue(All) is true)
             {
                 await foreach(var video in dbContext.Videos
-                    .Where(x => x.YouTubeId != null && x.SubtitlesUrl == null && x.TwitchId != null)
-                    .OrderByDescending(x => x.TwitchStartTime)
+                    .Where(x => x.YouTubeId != null && x.SubtitlesUrl == null)
+                    .OrderByDescending(x => x.TwitchStartTime ?? x.YouTubePublishTime)
                     .AsAsyncEnumerable())
                 {
                     yield return video;
@@ -429,6 +434,47 @@ public partial class YouTubeCommand : CliCommand
             }
             return null;
         }
+    }
+
+    private static async Task SyncYouTubeVideosToDatabase(YouTubeService service, StreamingDbContext dbContext, CancellationToken token)
+    {
+        DateOnly endDate = DateOnly.FromDateTime(DateTime.UtcNow);
+        DateOnly startDate = endDate.AddMonths(-4);
+
+        if (!YouTubePublishedDateRange.TryCreate(startDate, endDate, out var dateRange))
+        {
+            return;
+        }
+
+        Console.WriteLine($"Syncing YouTube videos from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}...");
+
+        int scanned = 0;
+        int inserted = 0;
+        int skipped = 0;
+
+        await foreach (var ytVideo in GetChannelVideosPublishedInRangeAsync(service, dateRange, token))
+        {
+            scanned++;
+            bool exists = await dbContext.Videos.AnyAsync(x => x.YouTubeId == ytVideo.VideoId, token);
+            if (exists)
+            {
+                skipped++;
+                continue;
+            }
+
+            var video = new Video
+            {
+                YouTubeId = ytVideo.VideoId,
+                YouTubePublishTime = ytVideo.PublishedAt,
+                TwitchTitle = ytVideo.Title, // Store YouTube title in TwitchTitle for now
+            };
+            dbContext.Videos.Add(video);
+            await dbContext.SaveChangesAsync(token);
+            inserted++;
+            Console.WriteLine($"  Added YouTube video '{ytVideo.Title}' ({ytVideo.VideoId}) published {ytVideo.PublishedAt:yyyy-MM-dd}");
+        }
+
+        Console.WriteLine($"YouTube sync complete: {scanned} scanned, {inserted} added, {skipped} already in database.");
     }
 
     private static async Task<Video?> GetVideoAsync(ParseResult ctx, StreamingDbContext dbContext, CancellationToken token)
