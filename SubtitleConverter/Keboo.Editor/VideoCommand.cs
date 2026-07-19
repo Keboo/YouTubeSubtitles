@@ -5,45 +5,51 @@ using System.CommandLine;
 
 namespace Keboo.Editor;
 
-public class VideoCommand : CliCommand
+public class VideoCommand : Command
 {
-    private static CliOption<int> VideoIdOption { get; } = new CliOption<int>("--video-id", "-id")
+    private static Option<int> VideoIdOption { get; } = new("--video-id")
     {
+        Aliases = { "-id" },
         Description = "The video id",
         Required = true
     };
 
-    private static CliOption<string?> YouTubeIdOption { get; } = new CliOption<string?>("--youtube-id", "-yt")
+    private static Option<string?> YouTubeIdOption { get; } = new("--youtube-id")
     {
+        Aliases = { "-yt" },
         Description = "The YouTube id"
     };
 
-    private static CliOption<string?> SubtitleUrlOption { get; } = new CliOption<string?>("--subtitle-url", "-s")
+    private static Option<string?> SubtitleUrlOption { get; } = new("--subtitle-url")
     {
+        Aliases = { "-s" },
         Description = "The subtitle url"
     };
 
-    private static CliOption<FileSystemInfo> InputOption { get; } = new CliOption<FileSystemInfo>("--input", "-i")
+    private static Option<FileSystemInfo> InputOption { get; } = new Option<FileSystemInfo>("--input")
     {
+        Aliases = { "-i" },
         Description = "An input file or directory",
         Required = true
     }.AcceptExistingOnly();
 
-    private static CliOption<FileSystemInfo> OutputOption { get; } = new CliOption<FileSystemInfo>("--output", "-o")
+    private static Option<FileSystemInfo> OutputOption { get; } = new("--output")
     {
+        Aliases = { "-o" },
         Description = "An output file or directory",
         Required = true
     };
 
-    private static CliOption<bool> ForceOption { get; } = new CliOption<bool>("--force", "-f")
+    private static Option<bool> ForceOption { get; } = new("--force")
     {
+        Aliases = { "-f" },
         Description = "Force the operation"
     };
 
     public VideoCommand()
         : base("video")
     {
-        var videoTrimCommand = new CliCommand("trim")
+        var videoTrimCommand = new Command("trim")
         {
             InputOption,
             OutputOption
@@ -57,11 +63,11 @@ public class VideoCommand : CliCommand
             await Trim(input, output);
         });
 
-        var listVideosCommand = new CliCommand("list-pending");
+        var listVideosCommand = new Command("list-pending");
         Add(listVideosCommand);
         listVideosCommand.SetAction(ListPendingVideos);
 
-        var updateVideo = new CliCommand("update")
+        var updateVideo = new Command("update")
         {
             VideoIdOption,
             YouTubeIdOption,

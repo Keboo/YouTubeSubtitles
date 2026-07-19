@@ -9,35 +9,35 @@ using TwitchVideo = TwitchLib.Api.Helix.Models.Videos.GetVideos.Video;
 
 namespace Keboo.Editor;
 
-public class TwitchCommand : CliCommand
+public class TwitchCommand : Command
 {
-    private static CliOption<string> UserIdOption { get; } = new("--twitch-user-id")
+    private static Option<string> UserIdOption { get; } = new("--twitch-user-id")
     {
         DefaultValueFactory = _ => Environment.GetEnvironmentVariable("KebooTwitchUserId") ?? "",
         Required = true
     };
 
-    private static CliOption<string> ClientIdOption { get; } = new("--twitch-client-id")
+    private static Option<string> ClientIdOption { get; } = new("--twitch-client-id")
     {
         DefaultValueFactory = _ => Environment.GetEnvironmentVariable("KebooTwitchClientId") ?? "",
         Required = true
     };
 
-    private static CliOption<string> ClientSecretOption { get; } = new("--twitch-client-secret")
+    private static Option<string> ClientSecretOption { get; } = new("--twitch-client-secret")
     {
         DefaultValueFactory = _ => Environment.GetEnvironmentVariable("KebooTwitchClientSecret") ?? "",
         Required = true
     };
 
-    private static CliOption<string> VideoIdOption { get; } = new("--twitch-video-id");
-    private static CliOption<DirectoryInfo> OutputOption { get; } = new("--output")
+    private static Option<string> VideoIdOption { get; } = new("--twitch-video-id");
+    private static Option<DirectoryInfo> OutputOption { get; } = new("--output")
     {
         DefaultValueFactory = _ => new DirectoryInfo(Path.Combine(Path.GetTempPath()))
     };
     public TwitchCommand()
         : base("twitch")
     {
-        CliCommand twitchDownload = new("download")
+        Command twitchDownload = new("download")
         {
             UserIdOption,
             ClientIdOption,

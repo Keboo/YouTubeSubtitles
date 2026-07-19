@@ -17,54 +17,63 @@ using YouTubePlaylist = Google.Apis.YouTube.v3.Data.Playlist;
 
 namespace Keboo.Editor;
 
-public partial class YouTubeCommand : CliCommand
+public partial class YouTubeCommand : Command
 {
-    private static CliOption<FileInfo> InputFileOption { get; } = new CliOption<FileInfo>("--input-file", "-f")
+    private static Option<FileInfo> InputFileOption { get; } = new Option<FileInfo>("--input-file")
     {
+        Aliases = { "-f" },
         Description = "An input file"
     }.AcceptExistingOnly();
 
-    private static CliOption<int> VideoIdOption { get; } = new CliOption<int>("--video-id", "-i")
+    private static Option<int> VideoIdOption { get; } = new("--video-id")
     {
+        Aliases = { "-i" },
         Description = "The video id"
     };
 
-    private static CliOption<string> TwitchVideoIdOption { get; } = new CliOption<string>("--twitch-id", "-t")
+    private static Option<string> TwitchVideoIdOption { get; } = new("--twitch-id")
     {
+        Aliases = { "-t" },
         Description = "The twitch video id"
     };
 
-    private static CliOption<DirectoryInfo> OutputDirectory { get; } = new CliOption<DirectoryInfo>("--output-directory", "-o")
+    private static Option<DirectoryInfo> OutputDirectory { get; } = new Option<DirectoryInfo>("--output-directory")
     {
+        Aliases = { "-o" },
         Description = "The output directory",
         Required = true
     }.AcceptExistingOnly();
 
-    private static CliOption<DirectoryInfo> VideoDirectory { get; } = new CliOption<DirectoryInfo>("--video-directory", "-v")
+    private static Option<DirectoryInfo> VideoDirectory { get; } = new Option<DirectoryInfo>("--video-directory")
     {
+        Aliases = { "-v" },
         Description = "The directory containing video files",
         Required = true
     }.AcceptExistingOnly();
 
-    private static CliOption<bool> All { get; } = new CliOption<bool>("--all", "-a")
+    private static Option<bool> All { get; } = new("--all")
     {
+        Aliases = { "-a" },
         Description = "Indicates if all videos should be processed",
     };
 
-    private static CliOption<string> PlaylistNameOption { get; } = new CliOption<string>("--name", "-n")
+    private static Option<string> PlaylistNameOption { get; } = new("--name")
     {
+        Aliases = { "-n" },
         Description = "The playlist name",
         Required = true
     };
 
-    private static CliOption<DateOnly> StartDateOption { get; } = new CliOption<DateOnly>("--start-date", "--from")
+    private static Option<DateOnly> StartDateOption { get; } = new("--start-date")
     {
+        Aliases = { "--from" },
         Description = "The first published date to include (yyyy-MM-dd)",
         Required = true
     };
 
-    private static CliOption<DateOnly> EndDateOption { get; } = new CliOption<DateOnly>("--end-date", "--to")
+    private static Option<DateOnly> EndDateOption { get; } = new("--end-date")
     {
+        Aliases = { "--to" },
         Description = "The last published date to include (yyyy-MM-dd)",
         Required = true
     };
@@ -72,7 +81,7 @@ public partial class YouTubeCommand : CliCommand
     public YouTubeCommand()
         : base("youtube")
     {
-        var listingCommand = new CliCommand("listing")
+        var listingCommand = new Command("listing")
         {
             InputFileOption,
             VideoIdOption,
@@ -97,7 +106,7 @@ public partial class YouTubeCommand : CliCommand
             return 0;
         });
 
-        var subtitlesCommand = new CliCommand("subtitles")
+        var subtitlesCommand = new Command("subtitles")
         {
             InputFileOption,
             VideoIdOption,
@@ -108,7 +117,7 @@ public partial class YouTubeCommand : CliCommand
         Add(subtitlesCommand);
         subtitlesCommand.SetAction(GenerateSubtitles);
 
-        var uploadCommand = new CliCommand("upload")
+        var uploadCommand = new Command("upload")
         {
             InputFileOption,
             VideoIdOption,
@@ -118,7 +127,7 @@ public partial class YouTubeCommand : CliCommand
         Add(uploadCommand);
         uploadCommand.SetAction(UploadVideo);
 
-        var playlistCommand = new CliCommand("playlist")
+        var playlistCommand = new Command("playlist")
         {
             PlaylistNameOption,
             StartDateOption,

@@ -8,26 +8,29 @@ namespace Keboo.Editor;
 
 public class Program
 {
-    private static CliOption<DirectoryInfo> TempDirectory { get; } = new CliOption<DirectoryInfo>("--working-directory", "-o")
+    private static Option<DirectoryInfo> TempDirectory { get; } = new("--working-directory")
     {
+        Aliases = { "-o" },
         Description = "The working directory",
         Required = true,
         DefaultValueFactory = _ => new DirectoryInfo(@"D:\Temp")
     };
 
-    private static CliOption<int?> VideoId { get; } = new CliOption<int?>("--video-id", "-i")
+    private static Option<int?> VideoId { get; } = new("--video-id")
     {
+        Aliases = { "-i" },
         Description = "The video ID to reprocess"
     };
 
-    private static CliOption<bool> Clean { get; } = new CliOption<bool>("--clean", "-c")
+    private static Option<bool> Clean { get; } = new("--clean")
     {
+        Aliases = { "-c" },
         Description = "Whether to for a clean state rather than leveraging cached data"
     };
 
     public static Task<int> Main(string[] args)
     {
-        CliCommand processAll = new("process")
+        Command processAll = new("process")
         {
             TempDirectory, 
             VideoId,
@@ -35,7 +38,7 @@ public class Program
         };
         processAll.SetAction(ProcessAll);
 
-        CliRootCommand rootCommand =
+        RootCommand rootCommand =
         [
             processAll,
             new TwitchCommand(),
@@ -43,7 +46,7 @@ public class Program
             new YouTubeCommand()
         ];
 
-        return new CliConfiguration(rootCommand).InvokeAsync(args);
+        return rootCommand.Parse(args).InvokeAsync();
     }
 
     private static async Task<int> ProcessAll(ParseResult ctx, CancellationToken token)

@@ -15,20 +15,20 @@ class Program
 {
     static Task<int> Main(string[] args)
     {
-        CliOption<string> twitchUserId = Option("--twitch-user-id");
-        CliOption<string> twitchClientId = Option("--twitch-client-id");
-        CliOption<string> twitchClientSecret = Option("--twitch-client-secret");
-        CliOption<string?> twitchVideoId = new("--twitch-video-id")
+        Option<string> twitchUserId = Option("--twitch-user-id");
+        Option<string> twitchClientId = Option("--twitch-client-id");
+        Option<string> twitchClientSecret = Option("--twitch-client-secret");
+        Option<string?> twitchVideoId = new("--twitch-video-id")
         {
             Arity = ArgumentArity.ZeroOrOne
         };
-        CliOption<string> storageAccountKey = Option("--azure-storage-account-key");
-        CliOption<string> youTubeUsername = Option("--you-tube-username");
-        CliOption<string> youTubePassword = Option("--you-tube-password");
-        CliOption<string> youTubeRecoveryEmail = Option("--you-tube-recovery-email");
-        CliOption<string> youTubeTwoFactorCallbackUrl = Option("--you-tube-two-factor-callback-url");
+        Option<string> storageAccountKey = Option("--azure-storage-account-key");
+        Option<string> youTubeUsername = Option("--you-tube-username");
+        Option<string> youTubePassword = Option("--you-tube-password");
+        Option<string> youTubeRecoveryEmail = Option("--you-tube-recovery-email");
+        Option<string> youTubeTwoFactorCallbackUrl = Option("--you-tube-two-factor-callback-url");
 
-        CliRootCommand rootCommand = new()
+        RootCommand rootCommand = new()
         {
             twitchUserId,
             twitchClientId,
@@ -43,7 +43,7 @@ class Program
         rootCommand.SetAction(async (ctx, ct) =>
         {
             await MainInvoke(
-                    ctx.Configuration.Output,
+                    Console.Out,
                     ctx.GetValue(twitchUserId),
                     ctx.GetValue(twitchClientId),
                     ctx.GetValue(twitchClientSecret),
@@ -55,9 +55,9 @@ class Program
                     ctx.GetValue(youTubeTwoFactorCallbackUrl)
             );
         });
-        return new CliConfiguration(rootCommand).InvokeAsync(args);
+        return rootCommand.Parse(args).InvokeAsync();
 
-        static CliOption<string> Option(string alias)
+        static Option<string> Option(string alias)
             => new(alias)
             {
                 Arity = ArgumentArity.ZeroOrOne

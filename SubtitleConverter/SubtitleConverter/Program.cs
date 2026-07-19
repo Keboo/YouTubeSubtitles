@@ -12,31 +12,31 @@ class Program
 {
     static Task Main(string[] args)
     {
-        CliOption<string> outputDirectory = new("--output-directory")
+        Option<string> outputDirectory = new("--output-directory")
         {
             DefaultValueFactory = _ => ".",
         };
-        CliOption<string> storageAccountKey = new("--azure-storage-account-key")
+        Option<string> storageAccountKey = new("--azure-storage-account-key")
         {
             Required = true,
             Arity = ArgumentArity.ExactlyOne
         };
-        CliOption<string?> youTubeClientId = new("--you-tube-client-id")
+        Option<string?> youTubeClientId = new("--you-tube-client-id")
         {
             Required = true,
             Arity = ArgumentArity.ExactlyOne
         };
-        CliOption<string?> youTubeClientSecret = new("--you-tube-client-secret")
+        Option<string?> youTubeClientSecret = new("--you-tube-client-secret")
         {
             Required = true,
             Arity = ArgumentArity.ExactlyOne
         };
-        CliOption<string?> youTubeVideoId = new("--you-tube-video-id")
+        Option<string?> youTubeVideoId = new("--you-tube-video-id")
         {
             Arity = ArgumentArity.ZeroOrOne
         };
 
-        CliRootCommand rootCommand = new()
+        RootCommand rootCommand = new()
         {
             outputDirectory,
             storageAccountKey,
@@ -50,9 +50,9 @@ class Program
             ctx.GetValue(youTubeClientId)!,
             ctx.GetValue(youTubeClientSecret)!,
             ctx.GetValue(youTubeVideoId),
-            ctx.Configuration.Output
+            Console.Out
         ));
-        return new CliConfiguration(rootCommand).InvokeAsync(args);
+        return rootCommand.Parse(args).InvokeAsync();
     }
 
     /// <summary>

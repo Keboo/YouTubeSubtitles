@@ -7,34 +7,38 @@ public sealed class Program
 {
     private static Task<int> Main(string[] args)
     {
-        CliConfiguration configuration = GetConfiguration();
-        return configuration.InvokeAsync(args);
+        RootCommand rootCommand = GetRootCommand();
+        return rootCommand.Parse(args).InvokeAsync();
     }
 
-    public static CliConfiguration GetConfiguration()
+    public static RootCommand GetRootCommand()
     {
-        CliOption<string> fileNameOption = new("--file-name", "-f")
+        Option<string> fileNameOption = new("--file-name")
         {
+            Aliases = { "-f" },
             Description = "The name of the file to ingest"
         };
-        CliOption<DirectoryInfo> directoryOption = new("--directory", "-d")
+        Option<DirectoryInfo> directoryOption = new("--directory")
         {
+            Aliases = { "-d" },
             Description = "The directory that contains the markdown files to ingest",
             Required = true
         };
         directoryOption.AcceptExistingOnly();
-        CliOption<string> apiKeyOption = new("--api-key", "-k")
+        Option<string> apiKeyOption = new("--api-key")
         {
+            Aliases = { "-k" },
             Description = "The API key",
             Required = true
         };
-        CliOption<string> ingestEndpoint = new("--endpoint", "-e")
+        Option<string> ingestEndpoint = new("--endpoint")
         {
+            Aliases = { "-e" },
             Description = "The ingest endpoint",
             Required = true
         };
 
-        CliRootCommand rootCommand = new("A starter console app by Keboo")
+        RootCommand rootCommand = new("A starter console app by Keboo")
         {
             fileNameOption,
             directoryOption,
@@ -110,7 +114,7 @@ public sealed class Program
                 return content?.completed == true;
             }
         });
-        return new CliConfiguration(rootCommand);
+        return rootCommand;
     }
 
     private static async Task<(string Index, string DocumentId)?> IngestFileAsync(FileInfo file, HttpClient client, CancellationToken token)
