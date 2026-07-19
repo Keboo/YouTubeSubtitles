@@ -18,7 +18,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
     <PackageReference Include="Microsoft.Playwright" />
     <PackageReference Include="Polly" />
-    <PackageReference Include="System.Net.NameResolution" />
     <PackageReference Include="TwitchLib" />
   </ItemGroup>
 </Project>
