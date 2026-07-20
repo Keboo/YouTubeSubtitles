@@ -40,6 +40,10 @@
       "commandName": "Project",
       "commandLineArgs": "video update --video-id 20 --subtitle-url https://github.com/Keboo/YouTubeSubtitles/blob/main/Subtitles/2025-02-21-cvsvs7A5AnE.md"
     },
+    "Generate Descriptions": {
+      "commandName": "Project",
+      "commandLineArgs": "youtube description --transcript-directory ../../../../../Subtitles --model auto"
+    },
     "Process All": {
       "commandName": "Project",
       "commandLineArgs": "process"

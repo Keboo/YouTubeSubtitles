@@ -1,6 +1,8 @@
-﻿
 using Google.Apis.YouTube.v3;
+using System.ComponentModel;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using StreamingTools.Copilot;
 using StreamingTools.Data;
 using StreamingTools.Git;
 using StreamingTools.Subtitle;
@@ -19,6 +21,26 @@ namespace Keboo.Editor;
 
 public partial class YouTubeCommand : Command
 {
+    private const string TodoDescriptionMarker = "###TODO_DESCRIPTIOON###";
+    private static readonly string[] CommonVideoTags =
+    [
+        "programming",
+        "C#",
+        "dotnet",
+        "WPF",
+        "XAML",
+        "Avalonia",
+        "System.CommandLine",
+        "GitHub",
+        "GitKraken",
+        "Velopack",
+        "DevOps",
+        "Azure",
+        "Terraform",
+        "Kubernetes",
+        "Helm"
+    ];
+
     private static Option<FileInfo> InputFileOption { get; } = new Option<FileInfo>("--input-file")
     {
         Aliases = { "-f" },
@@ -37,6 +59,12 @@ public partial class YouTubeCommand : Command
         Description = "The twitch video id"
     };
 
+    private static Option<string?> YouTubeVideoIdOption { get; } = new("--youtube-id")
+    {
+        Aliases = { "-y" },
+        Description = "The YouTube video id"
+    };
+
     private static Option<DirectoryInfo> OutputDirectory { get; } = new Option<DirectoryInfo>("--output-directory")
     {
         Aliases = { "-o" },
@@ -50,6 +78,19 @@ public partial class YouTubeCommand : Command
         Description = "The directory containing video files",
         Required = true
     }.AcceptExistingOnly();
+
+    private static Option<DirectoryInfo> TranscriptDirectory { get; } = new Option<DirectoryInfo>("--transcript-directory")
+    {
+        Aliases = { "-d" },
+        Description = "The directory containing downloaded transcript markdown files",
+        Required = true
+    }.AcceptExistingOnly();
+
+    private static Option<string> DescriptionModelOption { get; } = new("--model")
+    {
+        Description = "Copilot model to use for description generation",
+        DefaultValueFactory = _ => "auto"
+    };
 
     private static Option<bool> All { get; } = new("--all")
     {
@@ -116,6 +157,18 @@ public partial class YouTubeCommand : Command
         };
         Add(subtitlesCommand);
         subtitlesCommand.SetAction(GenerateSubtitles);
+
+        var descriptionCommand = new Command("description")
+        {
+            InputFileOption,
+            VideoIdOption,
+            TwitchVideoIdOption,
+            YouTubeVideoIdOption,
+            TranscriptDirectory,
+            DescriptionModelOption
+        };
+        Add(descriptionCommand);
+        descriptionCommand.SetAction(GenerateDescriptionFromTranscriptAsync);
 
         var uploadCommand = new Command("upload")
         {
@@ -253,12 +306,19 @@ public partial class YouTubeCommand : Command
         var service = await YouTubeFactory.GetServiceAsync();
 
         var details = StreamingTools.YouTube.Description.GetDetails(video);
+        string uploadDescription = details.Description;
+        if (!uploadDescription.Contains(TodoDescriptionMarker, StringComparison.Ordinal))
+        {
+            uploadDescription =
+                $"{TodoDescriptionMarker}{Environment.NewLine}{Environment.NewLine}{uploadDescription}";
+        }
+
         YouTubeVideo youTubeVideo = new()
         {
             Snippet = new VideoSnippet
             {
                 Title = details.Title,
-                Description = details.Description,
+                Description = uploadDescription,
                 Tags = [.. details.Tags],
                 CategoryId = "28", // Science and Technology,
             },
@@ -286,7 +346,7 @@ public partial class YouTubeCommand : Command
             success = true;
         };
         Google.Apis.Upload.UploadStatus lastStatus = Google.Apis.Upload.UploadStatus.NotStarted;
-        insertRequest.ProgressChanged += (Google.Apis.Upload.IUploadProgress obj) =>
+        insertRequest.ProgressChanged += obj =>
         {
             if (obj.Status != lastStatus)
             {
@@ -443,6 +503,394 @@ public partial class YouTubeCommand : Command
             }
             return null;
         }
+    }
+
+    private static async Task<int> GenerateDescriptionFromTranscriptAsync(ParseResult ctx, CancellationToken token)
+    {
+        DirectoryInfo transcriptDirectory = ctx.GetValue(TranscriptDirectory)!;
+        string model = ctx.GetValue(DescriptionModelOption) ?? "auto";
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            model = "auto";
+        }
+
+        var service = await YouTubeFactory.GetServiceAsync();
+        List<YouTubeVideo> targetVideos = await GetTargetVideosForDescriptionAsync(ctx, service, token);
+        if (targetVideos.Count == 0)
+        {
+            Console.WriteLine($"No videos found that require description generation (marker: {TodoDescriptionMarker}).");
+            return 0;
+        }
+
+        int updated = 0;
+        int failed = 0;
+
+        foreach (YouTubeVideo youTubeVideo in targetVideos)
+        {
+            if (youTubeVideo.Id is not { Length: > 0 } youTubeId)
+            {
+                failed++;
+                continue;
+            }
+
+            DateTime[] preferredDates = youTubeVideo.Snippet?.PublishedAtDateTimeOffset is { } publishedAt
+                ? [publishedAt.Date]
+                : [];
+
+            if (TryFindTranscriptFile(youTubeId, transcriptDirectory, preferredDates) is not { } transcriptFile)
+            {
+                Console.WriteLine(
+                    $"Could not find transcript markdown for YouTube video '{youTubeId}' in '{transcriptDirectory.FullName}'. " +
+                    "Run 'youtube subtitles' first.");
+                failed++;
+                continue;
+            }
+
+            CopilotPromptResult result;
+            try
+            {
+                string prompt = BuildTranscriptDescriptionPrompt(youTubeVideo);
+                result = await CopilotCli.ExecutePromptWithAttachmentAsync(prompt, transcriptFile, model, token);
+            }
+            catch (Win32Exception ex)
+            {
+                Console.Error.WriteLine($"Failed to start Copilot CLI: {ex.Message}");
+                return 1;
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.Error.WriteLine($"Failed to run Copilot CLI: {ex.Message}");
+                return 1;
+            }
+
+            if (!result.Success)
+            {
+                Console.Error.WriteLine($"Copilot CLI failed to generate metadata for video '{youTubeId}'.");
+                if (!string.IsNullOrWhiteSpace(result.StandardError))
+                {
+                    Console.Error.WriteLine(result.StandardError.Trim());
+                }
+                failed++;
+                continue;
+            }
+
+            if (!TryParseGeneratedVideoUpdate(result.MessageContent, out var videoUpdate, out string parseError))
+            {
+                Console.Error.WriteLine($"Failed to parse generated metadata for video '{youTubeId}': {parseError}");
+                failed++;
+                continue;
+            }
+
+            ApplyGeneratedVideoUpdate(youTubeVideo, videoUpdate);
+            await service.Videos.Update(youTubeVideo, "snippet").ExecuteAsync(token);
+
+            updated++;
+            Console.WriteLine($"Updated YouTube video '{youTubeId}' title, description, and tags.");
+        }
+
+        Console.WriteLine($"Description generation complete: {updated} updated, {failed} failed.");
+        return failed;
+    }
+
+    private static async Task<List<YouTubeVideo>> GetTargetVideosForDescriptionAsync(ParseResult ctx, YouTubeService service, CancellationToken token)
+    {
+        if (ctx.GetValue(YouTubeVideoIdOption) is { Length: > 0 } explicitYouTubeId)
+        {
+            if (await GetYouTubeVideoAsync(service, explicitYouTubeId, token) is { } video)
+            {
+                return [video];
+            }
+
+            Console.WriteLine($"No YouTube video found for id '{explicitYouTubeId}'.");
+            return [];
+        }
+
+        bool hasDbSelector =
+            ctx.GetValue(VideoIdOption) > 0 ||
+            !string.IsNullOrWhiteSpace(ctx.GetValue(TwitchVideoIdOption)) ||
+            ctx.GetValue(InputFileOption) is not null;
+
+        if (hasDbSelector)
+        {
+            using var dbContext = await StreamingDbContext.CreateAsync(token);
+            var dbVideo = await GetVideoAsync(ctx, dbContext, token);
+            if (dbVideo is null)
+            {
+                Console.WriteLine("No video found");
+                return [];
+            }
+
+            if (string.IsNullOrWhiteSpace(dbVideo.YouTubeId))
+            {
+                Console.WriteLine($"Video {dbVideo.Id} does not have a YouTube Id");
+                return [];
+            }
+
+            if (await GetYouTubeVideoAsync(service, dbVideo.YouTubeId, token) is { } youTubeVideo)
+            {
+                return [youTubeVideo];
+            }
+
+            Console.WriteLine($"No YouTube video found for id '{dbVideo.YouTubeId}'.");
+            return [];
+        }
+
+        return await GetDraftVideosWithTodoMarkerAsync(service, token);
+    }
+
+    private static async Task<YouTubeVideo?> GetYouTubeVideoAsync(YouTubeService service, string youTubeId, CancellationToken token)
+    {
+        var request = service.Videos.List("id,snippet,status");
+        request.Id = youTubeId;
+
+        var response = await request.ExecuteAsync(token);
+        return response.Items.FirstOrDefault();
+    }
+
+    private static async Task<List<YouTubeVideo>> GetDraftVideosWithTodoMarkerAsync(YouTubeService service, CancellationToken token)
+    {
+        var channelsRequest = service.Channels.List("contentDetails");
+        channelsRequest.Mine = true;
+        var channelsResponse = await channelsRequest.ExecuteAsync(token);
+
+        string? uploadsPlaylistId = channelsResponse.Items.FirstOrDefault()?.ContentDetails?.RelatedPlaylists?.Uploads;
+        if (string.IsNullOrWhiteSpace(uploadsPlaylistId))
+        {
+            return [];
+        }
+
+        HashSet<string> videoIds = [];
+        var playlistItemsRequest = service.PlaylistItems.List("contentDetails");
+        playlistItemsRequest.PlaylistId = uploadsPlaylistId;
+        playlistItemsRequest.MaxResults = 50;
+
+        do
+        {
+            var playlistItemsResponse = await playlistItemsRequest.ExecuteAsync(token);
+            foreach (var item in playlistItemsResponse.Items)
+            {
+                if (!string.IsNullOrWhiteSpace(item.ContentDetails?.VideoId))
+                {
+                    videoIds.Add(item.ContentDetails.VideoId);
+                }
+            }
+
+            playlistItemsRequest.PageToken = playlistItemsResponse.NextPageToken;
+        }
+        while (!string.IsNullOrWhiteSpace(playlistItemsRequest.PageToken));
+
+        List<YouTubeVideo> draftVideos = [];
+        foreach (string[] batch in videoIds.Chunk(50))
+        {
+            var videosRequest = service.Videos.List("id,snippet,status");
+            videosRequest.Id = string.Join(",", batch);
+            var videosResponse = await videosRequest.ExecuteAsync(token);
+
+            foreach (var video in videosResponse.Items)
+            {
+                if (video.Status?.PrivacyStatus?.Equals("private", StringComparison.OrdinalIgnoreCase) == true &&
+                    video.Snippet?.Description?.Contains(TodoDescriptionMarker, StringComparison.Ordinal) == true)
+                {
+                    draftVideos.Add(video);
+                }
+            }
+        }
+
+        return [.. draftVideos.OrderByDescending(x => x.Snippet?.PublishedAtDateTimeOffset ?? DateTimeOffset.MinValue)];
+    }
+
+    private static FileInfo? TryFindTranscriptFile(string youTubeId, DirectoryInfo transcriptDirectory, params DateTime[] preferredDates)
+    {
+        if (string.IsNullOrWhiteSpace(youTubeId))
+        {
+            return null;
+        }
+
+        HashSet<string> candidates = [];
+        foreach (DateTime preferredDate in preferredDates)
+        {
+            candidates.Add(Subtitles.GetMarkdownFileName(youTubeId, preferredDate.Date));
+        }
+
+        if (candidates.Count == 0)
+        {
+            candidates.Add(Subtitles.GetMarkdownFileName(youTubeId, DateTime.Today));
+        }
+
+        foreach (string candidate in candidates)
+        {
+            string path = Path.Combine(transcriptDirectory.FullName, candidate);
+            if (File.Exists(path))
+            {
+                return new FileInfo(path);
+            }
+        }
+
+        return transcriptDirectory
+            .EnumerateFiles($"*-{youTubeId}.md", SearchOption.TopDirectoryOnly)
+            .OrderByDescending(x => x.LastWriteTimeUtc)
+            .FirstOrDefault()
+            ?? transcriptDirectory
+                .EnumerateFiles($"{youTubeId}.md", SearchOption.TopDirectoryOnly)
+                .OrderByDescending(x => x.LastWriteTimeUtc)
+                .FirstOrDefault();
+    }
+
+    private static string BuildTranscriptDescriptionPrompt(YouTubeVideo video)
+    {
+        string title = string.IsNullOrWhiteSpace(video.Snippet?.Title) ? "Untitled" : video.Snippet.Title;
+        string description = video.Snippet?.Description ?? string.Empty;
+        string currentTags = video.Snippet?.Tags is { Count: > 0 } tags
+            ? string.Join(", ", tags)
+            : "(none)";
+        string allowedTags = string.Join(", ", CommonVideoTags);
+
+        return $$"""
+            Generate YouTube metadata from the attached transcript markdown file.
+
+            Return ONLY a valid JSON object with this exact shape:
+            {"title":"...","description":"...","tags":["tag1","tag2"]}
+
+            Requirements:
+            - Use the transcript as the source of truth.
+            - Produce a polished title, description, and tag list.
+            - Preserve key context from the current title/description when appropriate.
+            - The description MUST NOT contain the token {{TodoDescriptionMarker}}.
+            - Do not invent links, sponsors, timestamps, or facts not present in the transcript.
+            - Tags must be selected from the allowed tags list only.
+            - Return 8-15 tags.
+
+            Video context:
+            - YouTube ID: {{video.Id}}
+            - Current title: {{title}}
+            - Current description:
+            {{description}}
+            - Current tags: {{currentTags}}
+            - Allowed tags: {{allowedTags}}
+            """;
+    }
+
+    private static bool TryParseGeneratedVideoUpdate(string? messageContent, out GeneratedVideoUpdate update, out string error)
+    {
+        update = default;
+        error = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(messageContent))
+        {
+            error = "Copilot returned empty content.";
+            return false;
+        }
+
+        string rawJson = UnwrapCodeFence(messageContent);
+
+        JsonDocument jsonDocument;
+        try
+        {
+            jsonDocument = JsonDocument.Parse(rawJson);
+        }
+        catch (JsonException ex)
+        {
+            error = $"Invalid JSON returned by Copilot: {ex.Message}";
+            return false;
+        }
+
+        using (jsonDocument)
+        {
+            JsonElement root = jsonDocument.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                error = "Copilot JSON result was not an object.";
+                return false;
+            }
+
+            string? generatedTitle = root.TryGetProperty("title", out JsonElement titleElement) ? titleElement.GetString() : null;
+            string? generatedDescription = root.TryGetProperty("description", out JsonElement descriptionElement) ? descriptionElement.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(generatedTitle))
+            {
+                error = "Generated title was empty.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(generatedDescription))
+            {
+                error = "Generated description was empty.";
+                return false;
+            }
+
+            List<string> generatedTags = [];
+            if (root.TryGetProperty("tags", out JsonElement tagsElement) &&
+                tagsElement.ValueKind == JsonValueKind.Array)
+            {
+                foreach (JsonElement element in tagsElement.EnumerateArray())
+                {
+                    if (element.ValueKind == JsonValueKind.String &&
+                        element.GetString() is { } tag &&
+                        !string.IsNullOrWhiteSpace(tag))
+                    {
+                        generatedTags.Add(tag.Trim());
+                    }
+                }
+            }
+
+            var normalizedAllowedTags = CommonVideoTags.ToDictionary(
+                x => x,
+                x => x,
+                StringComparer.OrdinalIgnoreCase);
+
+            List<string> filteredTags = [];
+            foreach (string tag in generatedTags)
+            {
+                if (normalizedAllowedTags.TryGetValue(tag, out string? normalizedTag) &&
+                    !filteredTags.Contains(normalizedTag, StringComparer.OrdinalIgnoreCase))
+                {
+                    filteredTags.Add(normalizedTag);
+                }
+            }
+
+            if (filteredTags.Count == 0)
+            {
+                filteredTags = [.. CommonVideoTags.Take(10)];
+            }
+
+            string cleanedDescription = generatedDescription
+                .Replace(TodoDescriptionMarker, string.Empty, StringComparison.Ordinal)
+                .Trim();
+
+            update = new GeneratedVideoUpdate(generatedTitle.Trim(), cleanedDescription, filteredTags);
+            return true;
+        }
+    }
+
+    private static string UnwrapCodeFence(string value)
+    {
+        string trimmed = value.Trim();
+        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
+        {
+            return trimmed;
+        }
+
+        int firstNewline = trimmed.IndexOf('\n');
+        if (firstNewline < 0)
+        {
+            return trimmed;
+        }
+
+        int lastFence = trimmed.LastIndexOf("```", StringComparison.Ordinal);
+        if (lastFence <= firstNewline)
+        {
+            return trimmed;
+        }
+
+        return trimmed[(firstNewline + 1)..lastFence].Trim();
+    }
+
+    private static void ApplyGeneratedVideoUpdate(YouTubeVideo video, GeneratedVideoUpdate update)
+    {
+        video.Snippet ??= new VideoSnippet();
+        video.Snippet.Title = update.Title;
+        video.Snippet.Description = update.Description;
+        video.Snippet.Tags = [.. update.Tags];
     }
 
     private static async Task SyncYouTubeVideosToDatabase(YouTubeService service, StreamingDbContext dbContext, CancellationToken token)
@@ -654,4 +1102,5 @@ public partial class YouTubeCommand : Command
     }
 
     private sealed record YouTubeChannelVideo(string VideoId, string Title, DateTimeOffset PublishedAt);
+    private readonly record struct GeneratedVideoUpdate(string Title, string Description, IReadOnlyCollection<string> Tags);
 }

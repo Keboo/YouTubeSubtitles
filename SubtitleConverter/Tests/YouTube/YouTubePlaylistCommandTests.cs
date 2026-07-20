@@ -31,6 +31,20 @@ public class YouTubePlaylistCommandTests
         Assert.Contains("--to", output);
     }
 
+    [Fact]
+    public async Task DescriptionCommand_Help_ShowsExpectedOptions()
+    {
+        var (exitCode, output) = await RunProgramAsync(
+            "youtube", "description", "--help");
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("--transcript-directory", output);
+        Assert.Contains("--output-file", output);
+        Assert.Contains("--model", output);
+        Assert.Contains("--youtube-id", output);
+        Assert.Contains("--video-id", output);
+    }
+
     private static async Task<(int ExitCode, string Output)> RunProgramAsync(params string[] args)
     {
         await ConsoleLock.WaitAsync();
