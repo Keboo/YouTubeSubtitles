@@ -39,7 +39,6 @@ public class YouTubePlaylistCommandTests
 
         Assert.Equal(0, exitCode);
         Assert.Contains("--transcript-directory", output);
-        Assert.Contains("--output-file", output);
         Assert.Contains("--model", output);
         Assert.Contains("--youtube-id", output);
         Assert.Contains("--video-id", output);

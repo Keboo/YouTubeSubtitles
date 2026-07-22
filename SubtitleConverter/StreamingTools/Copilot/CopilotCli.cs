@@ -8,17 +8,10 @@ public static class CopilotCli
 {
     public static async Task<CopilotPromptResult> ExecutePromptWithAttachmentAsync(
         string prompt,
-        FileInfo attachmentFile,
         string model,
         CancellationToken token = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(prompt);
-        ArgumentNullException.ThrowIfNull(attachmentFile);
-
-        if (!attachmentFile.Exists)
-        {
-            throw new FileNotFoundException("Attachment file was not found.", attachmentFile.FullName);
-        }
 
         string resolvedModel = string.IsNullOrWhiteSpace(model) ? "auto" : model;
 
@@ -28,7 +21,6 @@ public static class CopilotCli
                 "copilot",
                 prefixWithGhCopilot: false,
                 prompt,
-                attachmentFile,
                 resolvedModel,
                 token);
         }
@@ -38,7 +30,6 @@ public static class CopilotCli
                 "gh",
                 prefixWithGhCopilot: true,
                 prompt,
-                attachmentFile,
                 resolvedModel,
                 token);
         }
@@ -48,7 +39,6 @@ public static class CopilotCli
         string fileName,
         bool prefixWithGhCopilot,
         string prompt,
-        FileInfo attachmentFile,
         string model,
         CancellationToken token)
     {
@@ -68,8 +58,6 @@ public static class CopilotCli
 
         startInfo.ArgumentList.Add("-p");
         startInfo.ArgumentList.Add(prompt);
-        startInfo.ArgumentList.Add("--attachment");
-        startInfo.ArgumentList.Add(attachmentFile.FullName);
         startInfo.ArgumentList.Add("--silent");
         startInfo.ArgumentList.Add("--allow-all-tools");
         startInfo.ArgumentList.Add("--no-color");

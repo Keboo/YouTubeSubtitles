@@ -21,7 +21,8 @@ namespace Keboo.Editor;
 
 public partial class YouTubeCommand : Command
 {
-    private const string TodoDescriptionMarker = "###TODO_DESCRIPTIOON###";
+    private const string TodoDescriptionMarker = "###TODO_DESCRIPTION###";
+    private const long DraftDiscoveryWindowSize = 30;
     private static readonly string[] CommonVideoTags =
     [
         "programming",
@@ -522,6 +523,13 @@ public partial class YouTubeCommand : Command
             return 0;
         }
 
+        Console.WriteLine("Generating metadata for videos:");
+        foreach(var video in targetVideos)
+        {
+            Console.WriteLine($"  - {video.Id}: {video.Snippet?.Title}");
+        }
+        Console.WriteLine();
+
         int updated = 0;
         int failed = 0;
 
@@ -549,8 +557,9 @@ public partial class YouTubeCommand : Command
             CopilotPromptResult result;
             try
             {
-                string prompt = BuildTranscriptDescriptionPrompt(youTubeVideo);
-                result = await CopilotCli.ExecutePromptWithAttachmentAsync(prompt, transcriptFile, model, token);
+                Console.WriteLine($"Generating video data for '{youTubeId}': {youTubeVideo.Snippet?.Title}");
+                string prompt = BuildTranscriptDescriptionPrompt(youTubeVideo, transcriptFile.FullName);
+                result = await CopilotCli.ExecutePromptWithAttachmentAsync(prompt, model, token);
             }
             catch (Win32Exception ex)
             {
@@ -649,54 +658,35 @@ public partial class YouTubeCommand : Command
 
     private static async Task<List<YouTubeVideo>> GetDraftVideosWithTodoMarkerAsync(YouTubeService service, CancellationToken token)
     {
-        var channelsRequest = service.Channels.List("contentDetails");
-        channelsRequest.Mine = true;
-        var channelsResponse = await channelsRequest.ExecuteAsync(token);
+        // Use the authenticated "forMine" search feed to get recent video IDs,
+        // then resolve/filter videos via service.Videos.
+        var recentVideoIdRequest = service.Search.List("id");
+        recentVideoIdRequest.ForMine = true;
+        recentVideoIdRequest.Type = "video";
+        recentVideoIdRequest.Order = SearchResource.ListRequest.OrderEnum.Date;
+        recentVideoIdRequest.MaxResults = DraftDiscoveryWindowSize;
 
-        string? uploadsPlaylistId = channelsResponse.Items.FirstOrDefault()?.ContentDetails?.RelatedPlaylists?.Uploads;
-        if (string.IsNullOrWhiteSpace(uploadsPlaylistId))
+        var recentVideoIdResponse = await recentVideoIdRequest.ExecuteAsync(token);
+        string[] recentVideoIds = [.. recentVideoIdResponse.Items
+            .Select(x => x.Id?.VideoId)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.Ordinal)
+            .Cast<string>()];
+
+        if (recentVideoIds.Length == 0)
         {
             return [];
         }
 
-        HashSet<string> videoIds = [];
-        var playlistItemsRequest = service.PlaylistItems.List("contentDetails");
-        playlistItemsRequest.PlaylistId = uploadsPlaylistId;
-        playlistItemsRequest.MaxResults = 50;
+        var videosRequest = service.Videos.List("id,snippet");
+        videosRequest.Id = string.Join(",", recentVideoIds);
+        var videosResponse = await videosRequest.ExecuteAsync(token);
 
-        do
-        {
-            var playlistItemsResponse = await playlistItemsRequest.ExecuteAsync(token);
-            foreach (var item in playlistItemsResponse.Items)
-            {
-                if (!string.IsNullOrWhiteSpace(item.ContentDetails?.VideoId))
-                {
-                    videoIds.Add(item.ContentDetails.VideoId);
-                }
-            }
+        List<YouTubeVideo> draftVideos = [.. videosResponse.Items
+            .Where(x => x.Snippet?.Description?.Contains(TodoDescriptionMarker, StringComparison.Ordinal) == true)
+            .OrderByDescending(x => x.Snippet?.PublishedAtDateTimeOffset ?? DateTimeOffset.MinValue)];
 
-            playlistItemsRequest.PageToken = playlistItemsResponse.NextPageToken;
-        }
-        while (!string.IsNullOrWhiteSpace(playlistItemsRequest.PageToken));
-
-        List<YouTubeVideo> draftVideos = [];
-        foreach (string[] batch in videoIds.Chunk(50))
-        {
-            var videosRequest = service.Videos.List("id,snippet,status");
-            videosRequest.Id = string.Join(",", batch);
-            var videosResponse = await videosRequest.ExecuteAsync(token);
-
-            foreach (var video in videosResponse.Items)
-            {
-                if (video.Status?.PrivacyStatus?.Equals("private", StringComparison.OrdinalIgnoreCase) == true &&
-                    video.Snippet?.Description?.Contains(TodoDescriptionMarker, StringComparison.Ordinal) == true)
-                {
-                    draftVideos.Add(video);
-                }
-            }
-        }
-
-        return [.. draftVideos.OrderByDescending(x => x.Snippet?.PublishedAtDateTimeOffset ?? DateTimeOffset.MinValue)];
+        return draftVideos;
     }
 
     private static FileInfo? TryFindTranscriptFile(string youTubeId, DirectoryInfo transcriptDirectory, params DateTime[] preferredDates)
@@ -736,7 +726,7 @@ public partial class YouTubeCommand : Command
                 .FirstOrDefault();
     }
 
-    private static string BuildTranscriptDescriptionPrompt(YouTubeVideo video)
+    private static string BuildTranscriptDescriptionPrompt(YouTubeVideo video, string transcriptFilePath)
     {
         string title = string.IsNullOrWhiteSpace(video.Snippet?.Title) ? "Untitled" : video.Snippet.Title;
         string description = video.Snippet?.Description ?? string.Empty;
@@ -746,7 +736,7 @@ public partial class YouTubeCommand : Command
         string allowedTags = string.Join(", ", CommonVideoTags);
 
         return $$"""
-            Generate YouTube metadata from the attached transcript markdown file.
+            Generate YouTube metadata from the transcript markdown file {{transcriptFilePath}}
 
             Return ONLY a valid JSON object with this exact shape:
             {"title":"...","description":"...","tags":["tag1","tag2"]}
@@ -755,13 +745,15 @@ public partial class YouTubeCommand : Command
             - Use the transcript as the source of truth.
             - Produce a polished title, description, and tag list.
             - Preserve key context from the current title/description when appropriate.
+            - Preserve any existing links.
             - The description MUST NOT contain the token {{TodoDescriptionMarker}}.
+            - The description and title should only contain ASCII characters.
+            - The description should be 3-8 sentences.
             - Do not invent links, sponsors, timestamps, or facts not present in the transcript.
             - Tags must be selected from the allowed tags list only.
-            - Return 8-15 tags.
+            - Return 3-8 tags.
 
             Video context:
-            - YouTube ID: {{video.Id}}
             - Current title: {{title}}
             - Current description:
             {{description}}
