@@ -1,6 +1,4 @@
 using Google.Apis.YouTube.v3;
-using System.ComponentModel;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using StreamingTools.Copilot;
 using StreamingTools.Data;
@@ -8,14 +6,15 @@ using StreamingTools.Git;
 using StreamingTools.Subtitle;
 using StreamingTools.YouTube;
 using System.CommandLine;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using PlaylistStatus = Google.Apis.YouTube.v3.Data.PlaylistStatus;
 using PlaylistSnippet = Google.Apis.YouTube.v3.Data.PlaylistSnippet;
+using PlaylistStatus = Google.Apis.YouTube.v3.Data.PlaylistStatus;
 using VideoRecordingDetails = Google.Apis.YouTube.v3.Data.VideoRecordingDetails;
 using VideoSnippet = Google.Apis.YouTube.v3.Data.VideoSnippet;
 using VideoStatus = Google.Apis.YouTube.v3.Data.VideoStatus;
-using YouTubeVideo = Google.Apis.YouTube.v3.Data.Video;
 using YouTubePlaylist = Google.Apis.YouTube.v3.Data.Playlist;
+using YouTubeVideo = Google.Apis.YouTube.v3.Data.Video;
 
 namespace Keboo.Editor;
 
