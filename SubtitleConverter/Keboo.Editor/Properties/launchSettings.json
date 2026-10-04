@@ -42,7 +42,7 @@
     },
     "Generate Descriptions": {
       "commandName": "Project",
-      "commandLineArgs": "youtube description --transcript-directory ../../../../../Subtitles --model \"gemini-3.5-flash\""
+      "commandLineArgs": "youtube description --transcript-directory ../../../../../Subtitles --model \"gemini-3.8-flash\""
     },
     "Process All": {
       "commandName": "Project",
