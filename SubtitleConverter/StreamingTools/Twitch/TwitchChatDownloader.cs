@@ -8,6 +8,7 @@ public class TwitchChatDownloader
 {
     private readonly HttpClient _httpClient;
     private const string TwitchClientId = "kimne78kx3ncx6brgo4mv6wki5h1ko";
+    private const string CommentsQueryHash = "b70a3591ff0f4e0313d126c6a1502d79a1c02baebb288227c582044aa76adf6a";
 
     public TwitchChatDownloader(HttpClient httpClient)
     {
@@ -48,13 +49,30 @@ public class TwitchChatDownloader
 
         do
         {
+            var variables = cursor == null
+                ? new Dictionary<string, object> { ["videoID"] = videoId, ["contentOffsetSeconds"] = 0 }
+                : new Dictionary<string, object> { ["videoID"] = videoId, ["cursor"] = cursor };
+            var body = new Dictionary<string, object>
+            {
+                ["operationName"] = "VideoCommentsByOffsetOrCursor",
+                ["variables"] = variables,
+                ["extensions"] = new Dictionary<string, object>
+                {
+                    ["persistedQuery"] = new Dictionary<string, object>
+                    {
+                        ["version"] = 1,
+                        ["sha256Hash"] = CommentsQueryHash
+                    }
+                }
+            };
+
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Get,
-                RequestUri = new Uri($"https://api.twitch.tv/v5/videos/{videoId}/comments{(cursor != null ? $"?cursor={cursor}" : "")}")
+                Method = HttpMethod.Post,
+                RequestUri = new Uri("https://gql.twitch.tv/gql"),
+                Content = new StringContent(JsonSerializer.Serialize(body), System.Text.Encoding.UTF8, "application/json")
             };
             request.Headers.Add("Client-ID", TwitchClientId);
-            request.Headers.Add("Accept", "application/vnd.twitchtv.v5+json");
 
             var response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
@@ -64,21 +82,24 @@ public class TwitchChatDownloader
             }
 
             var content = await response.Content.ReadAsStringAsync();
-            var chatResponse = JsonSerializer.Deserialize<TwitchChatResponse>(content);
+            var comments = JsonSerializer.Deserialize<TwitchGqlResponse>(content)?.Data?.Video?.Comments;
+            if (comments?.Edges == null || comments.Edges.Count == 0)
+                break;
 
-            if (chatResponse?.Comments != null)
+            string? nextCursor = null;
+            foreach (var edge in comments.Edges)
             {
-                foreach (var comment in chatResponse.Comments)
+                nextCursor = edge.Cursor ?? nextCursor;
+                var node = edge.Node;
+                if (node == null) continue;
+                allMessages.Add(new ChatMessage
                 {
-                    allMessages.Add(new ChatMessage
-                    {
-                        Username = comment.Commenter?.DisplayName ?? comment.Commenter?.Name ?? "",
-                        Message = comment.Message?.Body ?? ""
-                    });
-                }
+                    Username = node.Commenter?.Login ?? node.Commenter?.DisplayName ?? "",
+                    Message = string.Concat(node.Message?.Fragments?.Select(f => f.Text) ?? [])
+                });
             }
 
-            cursor = chatResponse?.Next;
+            cursor = comments.PageInfo?.HasNextPage == true ? nextCursor : null;
 
         } while (cursor != null);
 
@@ -111,36 +132,75 @@ public class TwitchChatDownloader
         public string Message { get; set; } = "";
     }
 
-    private class TwitchChatResponse
+    private class TwitchGqlResponse
+    {
+        [JsonPropertyName("data")]
+        public GqlData? Data { get; set; }
+    }
+
+    private class GqlData
+    {
+        [JsonPropertyName("video")]
+        public GqlVideo? Video { get; set; }
+    }
+
+    private class GqlVideo
     {
         [JsonPropertyName("comments")]
-        public List<TwitchComment>? Comments { get; set; }
-
-        [JsonPropertyName("_next")]
-        public string? Next { get; set; }
+        public GqlComments? Comments { get; set; }
     }
 
-    private class TwitchComment
+    private class GqlComments
+    {
+        [JsonPropertyName("edges")]
+        public List<GqlEdge>? Edges { get; set; }
+
+        [JsonPropertyName("pageInfo")]
+        public GqlPageInfo? PageInfo { get; set; }
+    }
+
+    private class GqlPageInfo
+    {
+        [JsonPropertyName("hasNextPage")]
+        public bool HasNextPage { get; set; }
+    }
+
+    private class GqlEdge
+    {
+        [JsonPropertyName("cursor")]
+        public string? Cursor { get; set; }
+
+        [JsonPropertyName("node")]
+        public GqlNode? Node { get; set; }
+    }
+
+    private class GqlNode
     {
         [JsonPropertyName("commenter")]
-        public TwitchCommenter? Commenter { get; set; }
+        public GqlCommenter? Commenter { get; set; }
 
         [JsonPropertyName("message")]
-        public TwitchCommentMessage? Message { get; set; }
+        public GqlMessage? Message { get; set; }
     }
 
-    private class TwitchCommenter
+    private class GqlCommenter
     {
-        [JsonPropertyName("display_name")]
+        [JsonPropertyName("displayName")]
         public string? DisplayName { get; set; }
 
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
+        [JsonPropertyName("login")]
+        public string? Login { get; set; }
     }
 
-    private class TwitchCommentMessage
+    private class GqlMessage
     {
-        [JsonPropertyName("body")]
-        public string? Body { get; set; }
+        [JsonPropertyName("fragments")]
+        public List<GqlFragment>? Fragments { get; set; }
+    }
+
+    private class GqlFragment
+    {
+        [JsonPropertyName("text")]
+        public string? Text { get; set; }
     }
 }
