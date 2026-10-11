@@ -594,6 +594,11 @@ public partial class YouTubeCommand : Command
 
             updated++;
             Console.WriteLine($"Updated YouTube video '{youTubeId}' title, description, and tags.");
+
+            if (!await UploadCoverImageAsync(service, youTubeId, videoUpdate, token))
+            {
+                failed++;
+            }
         }
 
         Console.WriteLine($"Description generation complete: {updated} updated, {failed} failed.");
@@ -738,9 +743,12 @@ public partial class YouTubeCommand : Command
             Generate YouTube metadata from the transcript markdown file {{transcriptFilePath}}
 
             Return ONLY a valid JSON object with this exact shape:
-            {"title":"...","description":"...","tags":["tag1","tag2"]}
+            {"title":"...","description":"...","tags":["tag1","tag2"],"coverTitle":"...","coverProject":"...","coverTech":"..."}
 
             Requirements:
+            - coverTitle is a SHORT version of the video title for the cover image. It must fit in at most 3 lines of about 12 characters each (aim for 20-30 characters total, 2-5 words, no single word longer than 14 characters). Rewrite rather than truncate.
+            - coverProject is the project or main thing worked on in the video. Examples: "Live Coding Stream", "Moq.AutoMock", "Aspire", "GitHub Copilot App", "XAML Test", "Material Design in XAML", "Velopack", "Open Source". Keep it under 26 characters.
+            - coverTech is the technology used in the video. Examples: "C#/XAML", "C#/WPF", ".NET". Keep it under 16 characters.
             - Use the transcript as the source of truth.
             - Produce a polished title, description, and tag list.
             - Preserve key context from the current title/description when appropriate.
@@ -848,7 +856,20 @@ public partial class YouTubeCommand : Command
                 .Replace(TodoDescriptionMarker, string.Empty, StringComparison.Ordinal)
                 .Trim();
 
-            update = new GeneratedVideoUpdate(generatedTitle.Trim(), cleanedDescription, filteredTags);
+            string? coverTitle = root.TryGetProperty("coverTitle", out JsonElement coverTitleElement) ? coverTitleElement.GetString() : null;
+            string? coverProject = root.TryGetProperty("coverProject", out JsonElement coverProjectElement) ? coverProjectElement.GetString() : null;
+            string? coverTech = root.TryGetProperty("coverTech", out JsonElement coverTechElement) ? coverTechElement.GetString() : null;
+
+            if (string.IsNullOrWhiteSpace(coverTitle) ||
+                string.IsNullOrWhiteSpace(coverProject) ||
+                string.IsNullOrWhiteSpace(coverTech))
+            {
+                error = "Generated cover image text (coverTitle, coverProject, coverTech) was missing.";
+                return false;
+            }
+
+            update = new GeneratedVideoUpdate(generatedTitle.Trim(), cleanedDescription, filteredTags,
+                coverTitle.Trim(), coverProject.Trim(), coverTech.Trim());
             return true;
         }
     }
@@ -874,6 +895,36 @@ public partial class YouTubeCommand : Command
         }
 
         return trimmed[(firstNewline + 1)..lastFence].Trim();
+    }
+
+    private static async Task<bool> UploadCoverImageAsync(YouTubeService service, string youTubeId, GeneratedVideoUpdate update, CancellationToken token)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Console.Error.WriteLine("Cover image generation is only supported on Windows.");
+            return false;
+        }
+
+        using var stream = new MemoryStream();
+        if (!ThumbnailGenerator.TryGenerate(
+            ThumbnailGenerator.GetDefaultBackground(),
+            update.CoverTitle, update.CoverProject, update.CoverTech, stream, out string error))
+        {
+            Console.Error.WriteLine($"Failed to generate cover image for video '{youTubeId}': {error}");
+            return false;
+        }
+
+        stream.Position = 0;
+        var upload = service.Thumbnails.Set(youTubeId, stream, "image/png");
+        var progress = await upload.UploadAsync(token);
+        if (progress.Status != Google.Apis.Upload.UploadStatus.Completed)
+        {
+            Console.Error.WriteLine($"Failed to upload cover image for video '{youTubeId}': {progress.Exception?.Message}");
+            return false;
+        }
+
+        Console.WriteLine($"Uploaded cover image for YouTube video '{youTubeId}'.");
+        return true;
     }
 
     private static void ApplyGeneratedVideoUpdate(YouTubeVideo video, GeneratedVideoUpdate update)
@@ -1093,5 +1144,7 @@ public partial class YouTubeCommand : Command
     }
 
     private sealed record YouTubeChannelVideo(string VideoId, string Title, DateTimeOffset PublishedAt);
-    private readonly record struct GeneratedVideoUpdate(string Title, string Description, IReadOnlyCollection<string> Tags);
+    private readonly record struct GeneratedVideoUpdate(
+        string Title, string Description, IReadOnlyCollection<string> Tags,
+        string CoverTitle, string CoverProject, string CoverTech);
 }

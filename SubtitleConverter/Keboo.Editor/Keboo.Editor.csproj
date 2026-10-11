@@ -7,8 +7,13 @@
 
   <ItemGroup>
     <PackageReference Include="System.CommandLine" />
+    <PackageReference Include="System.Drawing.Common" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Assets\VideoBackground.png" CopyToOutputDirectory="PreserveNewest" Condition="Exists('Assets\VideoBackground.png')" />
   </ItemGroup>
 
   <ItemGroup>
