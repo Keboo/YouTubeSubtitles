@@ -6,6 +6,19 @@ namespace Tests.Twitch;
 
 public class TwitchChatDownloaderTests
 {
+    // Manually run: hits the live Twitch API.
+    [Fact]
+    public async Task GetSharedLinksFromChatAsync_WithKnownVideo_ReturnsLinks()
+    {
+        using var httpClient = new HttpClient();
+        var downloader = new TwitchChatDownloader(httpClient);
+
+        string? links = await downloader.GetSharedLinksFromChatAsync("2895762284", "kitokeboo");
+
+        Assert.False(string.IsNullOrWhiteSpace(links));
+        Assert.Contains("https://www.youtube.com/live/-XL8rc4fn7s", links);
+    }
+
     [Fact]
     public void ExtractUrls_WithHttpsUrl_ReturnsUrl()
     {

@@ -151,6 +151,7 @@ public partial class YouTubeCommand : Command
         {
             InputFileOption,
             VideoIdOption,
+            YouTubeVideoIdOption,
             TwitchVideoIdOption,
             All,
             OutputDirectory
@@ -983,6 +984,11 @@ public partial class YouTubeCommand : Command
         if (ctx.GetValue(VideoIdOption) is var videoId and > 0)
         {
             rv = await dbContext.Videos.AsTracking().FirstOrDefaultAsync(x => x.Id == videoId, token);
+        }
+
+        if (ctx.GetValue(YouTubeVideoIdOption) is string youTubeVideoId)
+        {
+            rv = await dbContext.Videos.AsTracking().FirstOrDefaultAsync(x => x.YouTubeId == youTubeVideoId, token);
         }
 
         if (rv is null && ctx.GetValue(TwitchVideoIdOption) is string twitchVideoId)
