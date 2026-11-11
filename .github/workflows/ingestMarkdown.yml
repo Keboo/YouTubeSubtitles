@@ -24,7 +24,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v6
       with:
-        dotnet-version: 9.x
+        dotnet-version: 11.x
 
     - name: Run
       run: dotnet run --project ./AI/KebooBot.Ingest/KebooBot.Ingest.csproj -- 

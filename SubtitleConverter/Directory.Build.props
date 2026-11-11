@@ -2,7 +2,7 @@
   <!-- TODO: Move this up to affect AI too -->
   <PropertyGroup>
     <Nullable>enable</Nullable>
-    <LangVersion>13.0</LangVersion>
+    <LangVersion>15.0</LangVersion>
     <UserSecretsId>f0641d01-fdcd-4149-8dc9-dcc00ccbd7fc</UserSecretsId>
   </PropertyGroup>
 
