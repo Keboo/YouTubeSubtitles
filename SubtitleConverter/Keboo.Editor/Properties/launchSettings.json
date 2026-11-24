@@ -48,6 +48,10 @@
       "commandName": "Project",
       "commandLineArgs": "youtube description --transcript-directory ../../../../../Subtitles --model \"gemini-3.8-flash\""
     },
+    "Regenerate Thumbnail": {
+      "commandName": "Project",
+      "commandLineArgs": "youtube thumbnail --youtube-id JLxoE91tXn8 --transcript-directory ..\\..\\..\\..\\..\\Subtitles --model \"gemini-3.8-flash\""
+    },
     "Process All": {
       "commandName": "Project",
       "commandLineArgs": "process"

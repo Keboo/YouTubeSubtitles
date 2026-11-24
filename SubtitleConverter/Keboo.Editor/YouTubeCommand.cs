@@ -21,6 +21,11 @@ namespace Keboo.Editor;
 public partial class YouTubeCommand : Command
 {
     private const string TodoDescriptionMarker = "###TODO_DESCRIPTION###";
+    private const string CoverTextRequirements = """
+        - coverTitle is a SHORT version of the video title for the cover image. It must fit in at most 3 lines of about 12 characters each (aim for 20-30 characters total, 2-5 words, no single word longer than 14 characters). Rewrite rather than truncate.
+        - coverProject is the project or main thing worked on in the video. Examples: "Live Coding Stream", "Moq.AutoMock", "Aspire", "GitHub Copilot App", "XAML Test", "Material Design in XAML", "Velopack", "Open Source". Keep it under 26 characters.
+        - coverTech is the technology used in the video. Examples: "C#/XAML", "C#/WPF", ".NET". Keep it under 16 characters.
+        """;
     private const long DraftDiscoveryWindowSize = 30;
     private static readonly string[] CommonVideoTags =
     [
@@ -91,6 +96,19 @@ public partial class YouTubeCommand : Command
         Description = "Copilot model to use for description generation",
         DefaultValueFactory = _ => "auto"
     };
+
+    private static Option<string> ThumbnailYouTubeIdOption { get; } = new("--youtube-id")
+    {
+        Aliases = { "-y" },
+        Description = "The YouTube video id",
+        Required = true
+    };
+
+    private static Option<DirectoryInfo> ThumbnailTranscriptDirectory { get; } = new Option<DirectoryInfo>("--transcript-directory")
+    {
+        Aliases = { "-d" },
+        Description = "The transcript directory (required only when the description contains the replacement marker)"
+    }.AcceptExistingOnly();
 
     private static Option<bool> All { get; } = new("--all")
     {
@@ -170,6 +188,15 @@ public partial class YouTubeCommand : Command
         };
         Add(descriptionCommand);
         descriptionCommand.SetAction(GenerateDescriptionFromTranscriptAsync);
+
+        var thumbnailCommand = new Command("thumbnail", "Regenerate a video's thumbnail, generating its description first if it contains the replacement marker")
+        {
+            ThumbnailYouTubeIdOption,
+            ThumbnailTranscriptDirectory,
+            DescriptionModelOption
+        };
+        Add(thumbnailCommand);
+        thumbnailCommand.SetAction(RegenerateThumbnailAsync);
 
         var uploadCommand = new Command("upload")
         {
@@ -509,11 +536,7 @@ public partial class YouTubeCommand : Command
     private static async Task<int> GenerateDescriptionFromTranscriptAsync(ParseResult ctx, CancellationToken token)
     {
         DirectoryInfo transcriptDirectory = ctx.GetValue(TranscriptDirectory)!;
-        string model = ctx.GetValue(DescriptionModelOption) ?? "auto";
-        if (string.IsNullOrWhiteSpace(model))
-        {
-            model = "auto";
-        }
+        string model = GetDescriptionModel(ctx);
 
         var service = await YouTubeFactory.GetServiceAsync();
         List<YouTubeVideo> targetVideos = await GetTargetVideosForDescriptionAsync(ctx, service, token);
@@ -523,6 +546,41 @@ public partial class YouTubeCommand : Command
             return 0;
         }
 
+        return await GenerateVideoMetadataAsync(
+            service, targetVideos, transcriptDirectory, model, regenerateThumbnail: false, token);
+    }
+
+    private static async Task<int> RegenerateThumbnailAsync(ParseResult ctx, CancellationToken token)
+    {
+        string youTubeId = ctx.GetValue(ThumbnailYouTubeIdOption)!;
+        if (string.IsNullOrWhiteSpace(youTubeId))
+        {
+            Console.Error.WriteLine("YouTube video id cannot be empty.");
+            return 1;
+        }
+
+        var service = await YouTubeFactory.GetServiceAsync();
+        if (await GetYouTubeVideoAsync(service, youTubeId, token) is not { } video)
+        {
+            Console.Error.WriteLine($"No YouTube video found for id '{youTubeId}'.");
+            return 1;
+        }
+
+        return await GenerateVideoMetadataAsync(
+            service, [video], ctx.GetValue(ThumbnailTranscriptDirectory), GetDescriptionModel(ctx), regenerateThumbnail: true, token);
+    }
+
+    private static string GetDescriptionModel(ParseResult ctx) =>
+        ctx.GetValue(DescriptionModelOption) is { } model && !string.IsNullOrWhiteSpace(model) ? model : "auto";
+
+    private static async Task<int> GenerateVideoMetadataAsync(
+        YouTubeService service,
+        List<YouTubeVideo> targetVideos,
+        DirectoryInfo? transcriptDirectory,
+        string model,
+        bool regenerateThumbnail,
+        CancellationToken token)
+    {
         Console.WriteLine("Generating metadata for videos:");
         foreach(var video in targetVideos)
         {
@@ -531,25 +589,22 @@ public partial class YouTubeCommand : Command
         Console.WriteLine();
 
         int updated = 0;
+        int thumbnailsUploaded = 0;
         int failed = 0;
 
         foreach (YouTubeVideo youTubeVideo in targetVideos)
         {
             if (youTubeVideo.Id is not { Length: > 0 } youTubeId)
             {
+                Console.Error.WriteLine("Cannot generate metadata for a video without a YouTube id.");
                 failed++;
                 continue;
             }
 
-            DateTime[] preferredDates = youTubeVideo.Snippet?.PublishedAtDateTimeOffset is { } publishedAt
-                ? [publishedAt.Date]
-                : [];
-
-            if (TryFindTranscriptFile(youTubeId, transcriptDirectory, preferredDates) is not { } transcriptFile)
+            if (!TryBuildVideoMetadataPrompt(
+                youTubeVideo, transcriptDirectory, regenerateThumbnail, out string prompt, out bool updateDescription, out string promptError))
             {
-                Console.WriteLine(
-                    $"Could not find transcript markdown for YouTube video '{youTubeId}' in '{transcriptDirectory.FullName}'. " +
-                    "Run 'youtube subtitles' first.");
+                Console.Error.WriteLine(promptError);
                 failed++;
                 continue;
             }
@@ -558,7 +613,6 @@ public partial class YouTubeCommand : Command
             try
             {
                 Console.WriteLine($"Generating video data for '{youTubeId}': {youTubeVideo.Snippet?.Title}");
-                string prompt = BuildTranscriptDescriptionPrompt(youTubeVideo, transcriptFile.FullName);
                 result = await CopilotCli.ExecutePromptWithAttachmentAsync(prompt, model, token);
             }
             catch (Win32Exception ex)
@@ -583,27 +637,100 @@ public partial class YouTubeCommand : Command
                 continue;
             }
 
-            if (!TryParseGeneratedVideoUpdate(result.MessageContent, out var videoUpdate, out string parseError))
+            GeneratedCoverText coverText;
+            if (updateDescription)
             {
-                Console.Error.WriteLine($"Failed to parse generated metadata for video '{youTubeId}': {parseError}");
+                if (!TryParseGeneratedVideoUpdate(result.MessageContent, out var videoUpdate, out string parseError))
+                {
+                    Console.Error.WriteLine($"Failed to parse generated metadata for video '{youTubeId}': {parseError}");
+                    failed++;
+                    continue;
+                }
+
+                ApplyGeneratedVideoUpdate(youTubeVideo, videoUpdate);
+                await service.Videos.Update(youTubeVideo, "snippet").ExecuteAsync(token);
+
+                updated++;
+                Console.WriteLine($"Updated YouTube video '{youTubeId}' title, description, and tags.");
+                coverText = new(videoUpdate.CoverTitle, videoUpdate.CoverProject, videoUpdate.CoverTech);
+            }
+            else if (!TryParseGeneratedCoverText(result.MessageContent, out coverText, out string parseError))
+            {
+                Console.Error.WriteLine($"Failed to parse generated cover image text for video '{youTubeId}': {parseError}");
                 failed++;
                 continue;
             }
 
-            ApplyGeneratedVideoUpdate(youTubeVideo, videoUpdate);
-            await service.Videos.Update(youTubeVideo, "snippet").ExecuteAsync(token);
-
-            updated++;
-            Console.WriteLine($"Updated YouTube video '{youTubeId}' title, description, and tags.");
-
-            if (!await UploadCoverImageAsync(service, youTubeId, videoUpdate, token))
+            if (await UploadCoverImageAsync(service, youTubeId, coverText.Title, coverText.Project, coverText.Tech, token))
+            {
+                thumbnailsUploaded++;
+            }
+            else
             {
                 failed++;
             }
         }
 
-        Console.WriteLine($"Description generation complete: {updated} updated, {failed} failed.");
+        Console.WriteLine(regenerateThumbnail
+            ? $"Thumbnail regeneration complete: {thumbnailsUploaded} uploaded, {updated} descriptions updated, {failed} failed."
+            : $"Description generation complete: {updated} updated, {failed} failed.");
         return failed;
+    }
+
+    private static bool TryBuildVideoMetadataPrompt(
+        YouTubeVideo video,
+        DirectoryInfo? transcriptDirectory,
+        bool regenerateThumbnail,
+        out string prompt,
+        out bool updateDescription,
+        out string error)
+    {
+        prompt = string.Empty;
+        error = string.Empty;
+        updateDescription = !regenerateThumbnail ||
+            video.Snippet?.Description?.Contains(TodoDescriptionMarker, StringComparison.Ordinal) == true;
+
+        if (!updateDescription)
+        {
+            prompt = $$"""
+                Generate ONLY thumbnail cover image text for this YouTube video.
+
+                Return ONLY a valid JSON object with this exact shape:
+                {"coverTitle":"...","coverProject":"...","coverTech":"..."}
+
+                Requirements:
+                {{CoverTextRequirements}}
+                - Use the current description as written as the source of truth.
+                - Do not rewrite the video's title, description, or tags.
+                - Do not invent facts, or read a transcript.
+                - Return only ASCII characters.
+
+                Video context:
+                - Current title: {{video.Snippet?.Title}}
+                - Current description:
+                {{video.Snippet?.Description}}
+                """;
+            return true;
+        }
+
+        if (transcriptDirectory is null)
+        {
+            error = $"Video '{video.Id}' requires description generation. Specify --transcript-directory and run 'youtube subtitles' first.";
+            return false;
+        }
+
+        DateTime[] preferredDates = video.Snippet?.PublishedAtDateTimeOffset is { } publishedAt
+            ? [publishedAt.Date]
+            : [];
+        if (TryFindTranscriptFile(video.Id, transcriptDirectory, preferredDates) is not { } transcriptFile)
+        {
+            error = $"Could not find transcript markdown for YouTube video '{video.Id}' in '{transcriptDirectory.FullName}'. " +
+                "Run 'youtube subtitles' first.";
+            return false;
+        }
+
+        prompt = BuildTranscriptDescriptionPrompt(video, transcriptFile.FullName);
+        return true;
     }
 
     private static async Task<List<YouTubeVideo>> GetTargetVideosForDescriptionAsync(ParseResult ctx, YouTubeService service, CancellationToken token)
@@ -747,9 +874,7 @@ public partial class YouTubeCommand : Command
             {"title":"...","description":"...","tags":["tag1","tag2"],"coverTitle":"...","coverProject":"...","coverTech":"..."}
 
             Requirements:
-            - coverTitle is a SHORT version of the video title for the cover image. It must fit in at most 3 lines of about 12 characters each (aim for 20-30 characters total, 2-5 words, no single word longer than 14 characters). Rewrite rather than truncate.
-            - coverProject is the project or main thing worked on in the video. Examples: "Live Coding Stream", "Moq.AutoMock", "Aspire", "GitHub Copilot App", "XAML Test", "Material Design in XAML", "Velopack", "Open Source". Keep it under 26 characters.
-            - coverTech is the technology used in the video. Examples: "C#/XAML", "C#/WPF", ".NET". Keep it under 16 characters.
+            {{CoverTextRequirements}}
             - Use the transcript as the source of truth.
             - Produce a polished title, description, and tag list.
             - Preserve key context from the current title/description when appropriate.
@@ -857,23 +982,65 @@ public partial class YouTubeCommand : Command
                 .Replace(TodoDescriptionMarker, string.Empty, StringComparison.Ordinal)
                 .Trim();
 
-            string? coverTitle = root.TryGetProperty("coverTitle", out JsonElement coverTitleElement) ? coverTitleElement.GetString() : null;
-            string? coverProject = root.TryGetProperty("coverProject", out JsonElement coverProjectElement) ? coverProjectElement.GetString() : null;
-            string? coverTech = root.TryGetProperty("coverTech", out JsonElement coverTechElement) ? coverTechElement.GetString() : null;
-
-            if (string.IsNullOrWhiteSpace(coverTitle) ||
-                string.IsNullOrWhiteSpace(coverProject) ||
-                string.IsNullOrWhiteSpace(coverTech))
+            if (!TryReadGeneratedCoverText(root, out var coverText, out error))
             {
-                error = "Generated cover image text (coverTitle, coverProject, coverTech) was missing.";
                 return false;
             }
 
             update = new GeneratedVideoUpdate(generatedTitle.Trim(), cleanedDescription, filteredTags,
-                coverTitle.Trim(), coverProject.Trim(), coverTech.Trim());
+                coverText.Title, coverText.Project, coverText.Tech);
             return true;
         }
     }
+
+    private static bool TryParseGeneratedCoverText(string? messageContent, out GeneratedCoverText coverText, out string error)
+    {
+        coverText = default;
+        if (string.IsNullOrWhiteSpace(messageContent))
+        {
+            error = "Copilot returned empty content.";
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(UnwrapCodeFence(messageContent));
+            return TryReadGeneratedCoverText(document.RootElement, out coverText, out error);
+        }
+        catch (JsonException ex)
+        {
+            error = $"Invalid JSON returned by Copilot: {ex.Message}";
+            return false;
+        }
+    }
+
+    private static bool TryReadGeneratedCoverText(JsonElement root, out GeneratedCoverText coverText, out string error)
+    {
+        coverText = default;
+        error = string.Empty;
+        if (root.ValueKind != JsonValueKind.Object)
+        {
+            error = "Copilot JSON result was not an object.";
+            return false;
+        }
+
+        string? title = ReadString("coverTitle");
+        string? project = ReadString("coverProject");
+        string? tech = ReadString("coverTech");
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(project) || string.IsNullOrWhiteSpace(tech))
+        {
+            error = "Generated cover image text (coverTitle, coverProject, coverTech) was missing or invalid.";
+            return false;
+        }
+
+        coverText = new(title.Trim(), project.Trim(), tech.Trim());
+        return true;
+
+        string? ReadString(string name) =>
+            root.TryGetProperty(name, out var element) && element.ValueKind == JsonValueKind.String ? element.GetString() : null;
+    }
+
+    private readonly record struct GeneratedCoverText(string Title, string Project, string Tech);
 
     private static string UnwrapCodeFence(string value)
     {
@@ -898,7 +1065,8 @@ public partial class YouTubeCommand : Command
         return trimmed[(firstNewline + 1)..lastFence].Trim();
     }
 
-    private static async Task<bool> UploadCoverImageAsync(YouTubeService service, string youTubeId, GeneratedVideoUpdate update, CancellationToken token)
+    private static async Task<bool> UploadCoverImageAsync(
+        YouTubeService service, string youTubeId, string title, string project, string tech, CancellationToken token)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -909,7 +1077,7 @@ public partial class YouTubeCommand : Command
         using var stream = new MemoryStream();
         if (!ThumbnailGenerator.TryGenerate(
             ThumbnailGenerator.GetDefaultBackground(),
-            update.CoverTitle, update.CoverProject, update.CoverTech, stream, out string error))
+            title, project, tech, stream, out string error))
         {
             Console.Error.WriteLine($"Failed to generate cover image for video '{youTubeId}': {error}");
             return false;
